@@ -2096,6 +2096,274 @@ button:focus-visible,
   }
 }
 
+/* Global responsive refinements across all pages */
+@media screen and (max-width: 1200px) {
+  .head,
+  .index,
+  .work,
+  .blog,
+  .about,
+  .footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .about .about-info {
+    gap: 40px;
+  }
+
+  .about .about-bottom .experience .item {
+    grid-template-columns: 1fr 1.3fr 2.7fr;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .head,
+  .index,
+  .work,
+  .blog,
+  .about,
+  .footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .index .hello {
+    height: 340px;
+  }
+
+  .index .hello .title * {
+    font-size: 28px;
+  }
+
+  .index .quickly-link .title-hi {
+    font-size: 28px;
+  }
+
+  .about .about-info {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .about .about-info-right {
+    width: 100%;
+    gap: 28px;
+  }
+
+  .about .about-bottom .experience .item {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .work .card-list {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .head {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .head #menu-expand.active + #menu-panel {
+    left: 16px;
+  }
+
+  .head #menu-panel {
+    width: calc(100vw - 32px);
+  }
+
+  .head .menu li,
+  .head #menu-panel .menu-panel-content li,
+  .head #menu-expand-child {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .head #menu-panel .menu-panel-content {
+    gap: 10px;
+  }
+
+  .index,
+  .work,
+  .blog,
+  .about {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .index {
+    padding-top: 84px;
+  }
+
+  .work,
+  .blog,
+  .about {
+    padding-top: 128px;
+  }
+
+  .index .hello {
+    height: 300px;
+  }
+
+  .index .hello .title {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .index .hello .title * {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .index .hello .hello-desc {
+    text-align: center;
+    line-height: 24px;
+    height: auto;
+    min-height: 48px;
+    padding: 0 8px;
+  }
+
+  .index .quickly-link {
+    padding-top: 48px;
+  }
+
+  .index .quickly-link .title-hi {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .index .quickly-link .loader {
+    margin: 24px 0 32px 0;
+  }
+
+  .work .card-list {
+    grid-template-columns: 1fr;
+  }
+
+  .blog .blog-list {
+    max-width: 100%;
+  }
+
+  .blog .blog-list .item a .text .title-area {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .blog .blog-list .item a .text .title-area .tag {
+    font-size: 12px;
+    line-height: 20px;
+  }
+
+  .blog .blog-list .item a .post-cover {
+    padding-bottom: 56%;
+  }
+
+  .about .about-name {
+    font-size: 28px;
+    margin-bottom: 32px;
+  }
+
+  .about .about-info-right .contact-desc .list {
+    flex-direction: column;
+    margin-bottom: 8px;
+  }
+
+  .about .about-info-right .contact-desc .list .list-value a {
+    word-break: break-word;
+  }
+
+  .about .about-middle .power .list-00,
+  .about .about-middle .power .list-01 {
+    gap: 12px;
+  }
+
+  .about .about-bottom .experience {
+    gap: 32px;
+  }
+
+  .about .about-bottom .experience .item .project-experience {
+    gap: 24px;
+  }
+
+  .footer {
+    padding: 36px 16px 16px 16px;
+  }
+
+  .footer .copyright {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+  }
+
+  .widget .shape-light {
+    width: 420px;
+    bottom: -150px;
+  }
+
+  .widget .shape-star {
+    width: 100vw;
+  }
+
+  .widget .shape-earth {
+    width: 1400px;
+    height: 1400px;
+    bottom: -1340px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .head {
+    --height: 54px;
+  }
+
+  .head .logo img {
+    width: 108px;
+    height: auto;
+  }
+
+  .index .hello {
+    height: 270px;
+  }
+
+  .index .hello .title * {
+    font-size: 22px;
+  }
+
+  .index .quickly-link .title-hi {
+    font-size: 22px;
+  }
+
+  .index .quickly-link .link-card .link-card-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .work .card-list .item a,
+  .blog-grid-page .blog .blog-list .item a {
+    padding: 12px;
+  }
+
+  .about .about-middle .power .list-00,
+  .about .about-middle .power .list-01 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .about .about-info-left .introduce-desc,
+  .about .about-bottom .experience .item .project-experience .item .desc li {
+    font-size: 13px;
+    line-height: 22px;
+  }
+
+  .blog .blog-list .item a .post-cover {
+    padding-bottom: 62%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
