@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="color-scheme: dark;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - Image Lab Gallery</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg" />
+</head>
+<body>
+    <canvas class="fireworks"></canvas>
+    <div class="head">
+        <div class="main">
+            <a href="./index.html" class="logo"><img src="./assets/public/logo_text.svg"></a>
+            <div class="menu">
+                <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+            </div>
+            <div class="menu" id="menu-expand">
+                <li class="magical btn skin" id="menu-expand-child"><i class="icon menu-icon"></i></li>
+            </div>
+            <div id="menu-panel">
+                <div class="menu-panel-content">
+                    <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                    <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                    <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+                </div>
+            </div>
+        </div>
+        <blockquote><img src="./assets/public/logo.svg"></blockquote>
+    </div>
+
+    <div class="blog">
+        <div class="blog-left"><div class="blog-left-line"><img src="./assets/blog/line-dot.svg"></div></div>
+        <div class="blog-list">
+            <div class="item">
+                <div class="text">
+                    <div class="title-area">
+                        <div class="title"><div class="name">Image Lab Gallery for Security Blogs</div></div>
+                        <div class="tag">Design System</div>
+                    </div>
+                    <div class="desc">A compact reference page that demonstrates multiple image display types for technical writeups.</div>
+                </div>
+
+                <article class="blog-markdown blog-article">
+                    <h1>Visual Blocks for CTF and Security Writeups</h1>
+                    <p>This page demonstrates image patterns you can reuse in markdown posts. Each block is responsive and consistent with the existing portfolio style.</p>
+
+                    <h2>1) Single Hero Figure</h2>
+                    <figure>
+                        <img src="./assets/index/larkmap.png" alt="Hero figure">
+                        <figcaption>Single hero image with caption</figcaption>
+                    </figure>
+
+                    <h2>2) Two-column Gallery</h2>
+                    <div class="image-grid two">
+                        <figure>
+                            <img src="./assets/index/adapter.png" alt="Image 2-1">
+                            <figcaption>Before patch</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/rpb.png" alt="Image 2-2">
+                            <figcaption>After patch</figcaption>
+                        </figure>
+                    </div>
+
+                    <h2>3) Three-column Gallery</h2>
+                    <div class="image-grid three">
+                        <figure>
+                            <img src="./assets/index/figicon.png" alt="Image 3-1">
+                            <figcaption>Recon</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/dippermap.png" alt="Image 3-2">
+                            <figcaption>Exploit</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/qingicon.png" alt="Image 3-3">
+                            <figcaption>Validation</figcaption>
+                        </figure>
+                    </div>
+
+                    <h2>4) Inline Image with Code Context</h2>
+                    <p>Use inline blocks to explain one focused step and pair with a concise code snippet like <code>curl -i https://target/api</code>.</p>
+                    <figure>
+                        <img src="./assets/index/github.png" alt="Inline step image">
+                        <figcaption>Step-focused image block for short technical explanations</figcaption>
+                    </figure>
+
+                    <h2>5) Pairing Images with Table</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Image Type</th>
+                                <th>Best Use</th>
+                                <th>Block</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Single Figure</td>
+                                <td>Architecture and overview</td>
+                                <td><code>figure + figcaption</code></td>
+                            </tr>
+                            <tr>
+                                <td>Two-column</td>
+                                <td>Before/after comparison</td>
+                                <td><code>.image-grid.two</code></td>
+                            </tr>
+                            <tr>
+                                <td>Three-column</td>
+                                <td>Recon/exploit/validate sequence</td>
+                                <td><code>.image-grid.three</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <blockquote>
+                        Keep captions short and factual. In security writeups, image captions should support evidence, not decoration.
+                    </blockquote>
+                </article>
+
+                <div class="info blog-meta">
+                    <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="avatar"></div>
+                    <div class="info-name">Phan The Toan</div>
+                    <div class="info-time">2026-04-10</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./about.html">Phan The Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="./blog.html">Back to Blog</a></div>
+        </div>
+    </div>
+
+    <div class="widget">
+        <div class="shape-light"></div>
+        <div class="shape-star">
+            <div class="rising-stars rising-stars-visible">
+                <div style="height:1px;width:1px"></div>
+                <div style="height:2px;width:2px"></div>
+                <div style="height:1px;width:1px"></div>
+            </div>
+        </div>
+        <div class="shape-earth"></div>
+    </div>
+</body>
+<script>
+    window.addEventListener("mousemove", function (e) {
+        document.querySelectorAll(".magical").forEach(element => {
+            const rect = element.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const offsetY = e.clientY - rect.top;
+            element.style.setProperty("--mouse-x", `${offsetX}px`);
+            element.style.setProperty("--mouse-y", `${offsetY}px`);
+        });
+    });
+</script>
+<script src="./js/main.min.js"></script>
+<script src='./js/anime.js'></script>
+<script src='./js/firework.js'></script>
+</html>

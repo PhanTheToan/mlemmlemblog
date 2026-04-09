@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="color-scheme: dark;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - CYRADAR Case Notes</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg" />
+</head>
+<body>
+    <canvas class="fireworks"></canvas>
+    <div class="head">
+        <div class="main">
+            <a href="./index.html" class="logo"><img src="./assets/public/logo_text.svg"></a>
+            <div class="menu">
+                <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+            </div>
+            <div class="menu" id="menu-expand">
+                <li class="magical btn skin" id="menu-expand-child"><i class="icon menu-icon"></i></li>
+            </div>
+            <div id="menu-panel">
+                <div class="menu-panel-content">
+                    <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                    <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                    <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+                </div>
+            </div>
+        </div>
+        <blockquote><img src="./assets/public/logo.svg"></blockquote>
+    </div>
+
+    <div class="blog">
+        <div class="blog-left"><div class="blog-left-line"><img src="./assets/blog/line-dot.svg"></div></div>
+        <div class="blog-list">
+            <div class="item">
+                <div class="text">
+                    <div class="title-area">
+                        <div class="title"><div class="name">Pentest Case Notes from CYRADAR Internship</div></div>
+                        <div class="tag">Internship</div>
+                    </div>
+                    <div class="desc">Practical workflow from reconnaissance to validated remediation in production-like systems.</div>
+                </div>
+
+                <article class="blog-markdown blog-article">
+                    <h1>OWASP-guided Testing in Real-world Environments</h1>
+                    <p>During internship, I performed security assessments against web systems in different business domains. The process emphasized repeatability, evidence collection, and direct remediation collaboration.</p>
+
+                    <figure>
+                        <img src="./assets/index/dippermap.png" alt="Pentest process">
+                        <figcaption>High-level testing workflow</figcaption>
+                    </figure>
+
+                    <h2>Execution Flow</h2>
+                    <ol>
+                        <li><strong>Reconnaissance:</strong> endpoint mapping, parameter discovery, and attack surface prioritization.</li>
+                        <li><strong>Validation:</strong> confirm exploitability with low-impact PoCs.</li>
+                        <li><strong>Impact analysis:</strong> evaluate privilege boundary and business impact.</li>
+                        <li><strong>Reporting:</strong> document CVSS score, exploit path, and patch guidance.</li>
+                        <li><strong>Retest:</strong> verify fix quality and regression risk.</li>
+                    </ol>
+
+                    <div class="image-grid two">
+                        <figure>
+                            <img src="./assets/index/adapter.png" alt="Finding reproduction">
+                            <figcaption>Reproduction and evidence collection</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/larkmap.png" alt="Retest">
+                            <figcaption>Retest after remediation</figcaption>
+                        </figure>
+                    </div>
+
+                    <h2>Common Findings</h2>
+                    <ul>
+                        <li>Stored XSS through weak output encoding.</li>
+                        <li>IDOR caused by missing object-level authorization checks.</li>
+                        <li>Access control bypass due to inconsistent role validation.</li>
+                        <li>Business logic issues in workflow state transitions.</li>
+                    </ul>
+
+                    <pre><code class="language-bash"># quick recon sample
+ffuf -u https://target.tld/FUZZ -w wordlist.txt -mc 200,302
+nmap -sV -Pn target.tld
+arjun -u https://target.tld/path --get</code></pre>
+
+                    <h2 id="reporting-template">Reporting Template (CVSS-driven)</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Section</th>
+                                <th>Content</th>
+                                <th>Goal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Summary</td>
+                                <td>Issue type, scope, affected assets</td>
+                                <td>Fast triage by stakeholders</td>
+                            </tr>
+                            <tr>
+                                <td>PoC</td>
+                                <td>Step-by-step reproduction</td>
+                                <td>Developer verification</td>
+                            </tr>
+                            <tr>
+                                <td>Impact</td>
+                                <td>CVSS score and business impact</td>
+                                <td>Prioritization for fixes</td>
+                            </tr>
+                            <tr>
+                                <td>Remediation</td>
+                                <td>Code and config recommendations</td>
+                                <td>Safe and complete patching</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="image-grid three">
+                        <figure>
+                            <img src="./assets/index/rpb.png" alt="Business logic flaw">
+                            <figcaption>Business logic flaw</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/qingicon.png" alt="Stored XSS case">
+                            <figcaption>Stored XSS case</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/figicon.png" alt="IDOR chain">
+                            <figcaption>IDOR chain</figcaption>
+                        </figure>
+                    </div>
+
+                    <blockquote>
+                        A good report is not only about finding vulnerabilities. It must help engineering teams fix the issue correctly and quickly.
+                    </blockquote>
+                </article>
+
+                <div class="info blog-meta">
+                    <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="avatar"></div>
+                    <div class="info-name">Phan The Toan</div>
+                    <div class="info-time">2026-03-01</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./about.html">Phan The Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="./blog.html">Back to Blog</a></div>
+        </div>
+    </div>
+
+    <div class="widget">
+        <div class="shape-light"></div>
+        <div class="shape-star">
+            <div class="rising-stars rising-stars-visible">
+                <div style="height:1px;width:1px"></div>
+                <div style="height:2px;width:2px"></div>
+                <div style="height:1px;width:1px"></div>
+            </div>
+        </div>
+        <div class="shape-earth"></div>
+    </div>
+</body>
+<script>
+    window.addEventListener("mousemove", function (e) {
+        document.querySelectorAll(".magical").forEach(element => {
+            const rect = element.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const offsetY = e.clientY - rect.top;
+            element.style.setProperty("--mouse-x", `${offsetX}px`);
+            element.style.setProperty("--mouse-y", `${offsetY}px`);
+        });
+    });
+</script>
+<script src="./js/main.min.js"></script>
+<script src='./js/anime.js'></script>
+<script src='./js/firework.js'></script>
+</html>

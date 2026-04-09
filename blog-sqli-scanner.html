@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="color-scheme: dark;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - SQL Injection Scanner</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg" />
+</head>
+<body>
+    <canvas class="fireworks"></canvas>
+    <div class="head">
+        <div class="main">
+            <a href="./index.html" class="logo"><img src="./assets/public/logo_text.svg"></a>
+            <div class="menu">
+                <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+            </div>
+            <div class="menu" id="menu-expand">
+                <li class="magical btn skin" id="menu-expand-child"><i class="icon menu-icon"></i></li>
+            </div>
+            <div id="menu-panel">
+                <div class="menu-panel-content">
+                    <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                    <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                    <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+                </div>
+            </div>
+        </div>
+        <blockquote><img src="./assets/public/logo.svg"></blockquote>
+    </div>
+
+    <div class="blog">
+        <div class="blog-left">
+            <div class="blog-left-line"><img src="./assets/blog/line-dot.svg"></div>
+        </div>
+        <div class="blog-list">
+            <div class="item">
+                <div class="text">
+                    <div class="title-area">
+                        <div class="title"><div class="name">Building an Automated SQL Injection Scanner</div></div>
+                        <div class="tag">School Project</div>
+                    </div>
+                    <div class="desc">Python-based scanner with probing, payload fuzzing, response classification, and report export.</div>
+                </div>
+
+                <article class="blog-markdown blog-article">
+                    <h1>Automated SQLi Scanner for Fast Vulnerability Triage</h1>
+                    <p>This project was implemented to quickly detect <strong>Error-based</strong>, <strong>Boolean-based</strong>, and <strong>Time-based</strong> SQL Injection in web applications. Main objective: minimize manual trial-and-error and provide reproducible scan output for security review.</p>
+
+                    <figure>
+                        <img src="./assets/index/qingicon.png" alt="Scanner dashboard overview">
+                        <figcaption>Overview dashboard after scanning multiple endpoints</figcaption>
+                    </figure>
+
+                    <h2>Architecture and Workflow</h2>
+                    <p>Core pipeline:</p>
+                    <ol>
+                        <li>Target probing and endpoint discovery.</li>
+                        <li>Form/parameter extraction.</li>
+                        <li>Payload injection and baseline comparison.</li>
+                        <li>Response classification and severity tagging.</li>
+                        <li>Structured HTML report generation.</li>
+                    </ol>
+
+                    <pre><code class="language-python"># pseudo pipeline
+for endpoint in targets:
+    params = enumerate_parameters(endpoint)
+    for param in params:
+        payloads = get_payloads(param)
+        for payload in payloads:
+            result = send_probe(endpoint, param, payload)
+            classify_and_store(result)</code></pre>
+
+                    <h2>Image Variants in This Post</h2>
+                    <p>Below are <code>two-column</code> and <code>three-column</code> image grids used for technical storytelling:</p>
+
+                    <div class="image-grid two">
+                        <figure>
+                            <img src="./assets/index/larkmap.png" alt="Recon output">
+                            <figcaption>Recon result snapshot</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/adapter.png" alt="Payload queue">
+                            <figcaption>Payload queue visualization</figcaption>
+                        </figure>
+                    </div>
+
+                    <div class="image-grid three">
+                        <figure>
+                            <img src="./assets/index/rpb.png" alt="Error-based SQLi">
+                            <figcaption>Error-based</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/figicon.png" alt="Boolean-based SQLi">
+                            <figcaption>Boolean-based</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/dippermap.png" alt="Time-based SQLi">
+                            <figcaption>Time-based</figcaption>
+                        </figure>
+                    </div>
+
+                    <blockquote>
+                        Always run scanners only on authorized systems. Scanning without explicit permission is not acceptable.
+                    </blockquote>
+
+                    <h2 id="tooling">Tooling</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th>Tech</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Probing Engine</td>
+                                <td>Python requests</td>
+                                <td>Send controlled payload requests</td>
+                            </tr>
+                            <tr>
+                                <td>Report Builder</td>
+                                <td>Jinja2</td>
+                                <td>Generate readable HTML reports</td>
+                            </tr>
+                            <tr>
+                                <td>CLI Config</td>
+                                <td>Argparse + YAML</td>
+                                <td>Flexible scan configuration</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p>Inline command sample: run scanner with <code>python scanner.py -t targets.txt --mode time</code>.</p>
+                </article>
+
+                <div class="info blog-meta">
+                    <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="avatar"></div>
+                    <div class="info-name">Phan The Toan</div>
+                    <div class="info-time">2025-05-10</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./about.html">Phan The Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="./blog.html">Back to Blog</a></div>
+        </div>
+    </div>
+
+    <div class="widget">
+        <div class="shape-light"></div>
+        <div class="shape-star">
+            <div class="rising-stars rising-stars-visible">
+                <div style="height:1px;width:1px"></div>
+                <div style="height:2px;width:2px"></div>
+                <div style="height:1px;width:1px"></div>
+            </div>
+        </div>
+        <div class="shape-earth"></div>
+    </div>
+</body>
+<script>
+    window.addEventListener("mousemove", function (e) {
+        document.querySelectorAll(".magical").forEach(element => {
+            const rect = element.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const offsetY = e.clientY - rect.top;
+            element.style.setProperty("--mouse-x", `${offsetX}px`);
+            element.style.setProperty("--mouse-y", `${offsetY}px`);
+        });
+    });
+</script>
+<script src="./js/main.min.js"></script>
+<script src='./js/anime.js'></script>
+<script src='./js/firework.js'></script>
+</html>

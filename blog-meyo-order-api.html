@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="color-scheme: dark;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - Meyo Japan Order API</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg" />
+</head>
+<body>
+    <canvas class="fireworks"></canvas>
+    <div class="head">
+        <div class="main">
+            <a href="./index.html" class="logo"><img src="./assets/public/logo_text.svg"></a>
+            <div class="menu">
+                <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+            </div>
+            <div class="menu" id="menu-expand">
+                <li class="magical btn skin" id="menu-expand-child"><i class="icon menu-icon"></i></li>
+            </div>
+            <div id="menu-panel">
+                <div class="menu-panel-content">
+                    <li class="magical btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
+                    <li class="magical btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                    <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+                </div>
+            </div>
+        </div>
+        <blockquote><img src="./assets/public/logo.svg"></blockquote>
+    </div>
+
+    <div class="blog">
+        <div class="blog-left"><div class="blog-left-line"><img src="./assets/blog/line-dot.svg"></div></div>
+        <div class="blog-list">
+            <div class="item">
+                <div class="text">
+                    <div class="title-area">
+                        <div class="title"><div class="name">Meyo Japan Order: Secure API Engineering Notes</div></div>
+                        <div class="tag">Backend</div>
+                    </div>
+                    <div class="desc">Core API design for import/export order flow with reliable currency conversion and clean data boundaries.</div>
+                </div>
+
+                <article class="blog-markdown blog-article">
+                    <h1>From Business Requirements to Stable APIs</h1>
+                    <p>In this internship project, I implemented Spring Boot APIs for product and order management. The system handles data from multiple sources and requires predictable conversion between <strong>JPY</strong> and <strong>VND</strong>.</p>
+
+                    <figure>
+                        <img src="./assets/index/larkmap.png" alt="API domain flow">
+                        <figcaption>Domain flow: product import, order processing, and conversion service</figcaption>
+                    </figure>
+
+                    <h2>API Boundaries</h2>
+                    <ul>
+                        <li>Product import endpoint with strict request validation.</li>
+                        <li>Order endpoint with normalized status workflow.</li>
+                        <li>Currency conversion endpoint with deterministic rounding strategy.</li>
+                    </ul>
+
+                    <pre><code class="language-java">@PostMapping("/api/v1/orders")
+public ResponseEntity&lt;OrderDto&gt; createOrder(@Valid @RequestBody CreateOrderRequest req) {
+    OrderDto dto = orderService.create(req);
+    return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+}</code></pre>
+
+                    <h2>Image Storytelling Blocks</h2>
+                    <div class="image-grid two">
+                        <figure>
+                            <img src="./assets/index/adapter.png" alt="Order dashboard">
+                            <figcaption>Order dashboard</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/rpb.png" alt="Conversion API logs">
+                            <figcaption>Conversion API logs</figcaption>
+                        </figure>
+                    </div>
+
+                    <div class="image-grid three">
+                        <figure>
+                            <img src="./assets/index/figicon.png" alt="Validation">
+                            <figcaption>Validation layer</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/qingicon.png" alt="Business logic">
+                            <figcaption>Business logic</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="./assets/index/dippermap.png" alt="Monitoring">
+                            <figcaption>Monitoring and alerts</figcaption>
+                        </figure>
+                    </div>
+
+                    <h2>Implementation Notes</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Area</th>
+                                <th>Approach</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Validation</td>
+                                <td>Bean Validation + defensive checks</td>
+                                <td>Reduced malformed requests</td>
+                            </tr>
+                            <tr>
+                                <td>Currency</td>
+                                <td>Dedicated conversion API</td>
+                                <td>Consistent totals across reports</td>
+                            </tr>
+                            <tr>
+                                <td>Frontend support</td>
+                                <td>UI feature adjustments with HTML/CSS</td>
+                                <td>Improved usability for operations</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <blockquote>
+                        Backend quality in business systems is not only about passing tests. It is about predictable behavior under real operational data.
+                    </blockquote>
+                </article>
+
+                <div class="info blog-meta">
+                    <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="avatar"></div>
+                    <div class="info-name">Phan The Toan</div>
+                    <div class="info-time">2025-06-18</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./about.html">Phan The Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="./blog.html">Back to Blog</a></div>
+        </div>
+    </div>
+
+    <div class="widget">
+        <div class="shape-light"></div>
+        <div class="shape-star">
+            <div class="rising-stars rising-stars-visible">
+                <div style="height:1px;width:1px"></div>
+                <div style="height:2px;width:2px"></div>
+                <div style="height:1px;width:1px"></div>
+            </div>
+        </div>
+        <div class="shape-earth"></div>
+    </div>
+</body>
+<script>
+    window.addEventListener("mousemove", function (e) {
+        document.querySelectorAll(".magical").forEach(element => {
+            const rect = element.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const offsetY = e.clientY - rect.top;
+            element.style.setProperty("--mouse-x", `${offsetX}px`);
+            element.style.setProperty("--mouse-y", `${offsetY}px`);
+        });
+    });
+</script>
+<script src="./js/main.min.js"></script>
+<script src='./js/anime.js'></script>
+<script src='./js/firework.js'></script>
+</html>
