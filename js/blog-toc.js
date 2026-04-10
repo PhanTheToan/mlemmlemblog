@@ -1,6 +1,7 @@
 (function () {
     const article = document.querySelector(".blog-markdown");
     if (!article) return;
+    document.body.classList.add("blog-post-page");
 
     const allHeadings = Array.from(article.querySelectorAll("h1, h2, h3"));
     const headings = allHeadings.some((h) => h.tagName !== "H1")

@@ -1090,15 +1090,41 @@ body {
 .footer .copyright,
 .widget,
 .widget .shape-star {
-  --mw: 1120px;
+  --mw: 1240px !important;
 }
 
 .blog .blog-list {
-  max-width: 1020px;
+  max-width: 1120px;
 }
 
 .about .about-info-left {
-  max-width: 760px;
+  max-width: 860px;
+}
+
+/* Blog post pages: prioritize reading width */
+.blog-post-page .blog {
+  --mw: 1320px !important;
+}
+
+.blog-post-page .blog .blog-left {
+  min-width: 28px;
+}
+
+.blog-post-page .blog .blog-left .blog-left-line {
+  opacity: 0.55;
+}
+
+.blog-post-page .blog .blog-list {
+  max-width: 1240px;
+}
+
+.blog-post-page .blog-post-layout {
+  grid-template-columns: minmax(0, 1fr) clamp(176px, 15vw, 216px);
+  gap: 18px;
+}
+
+.blog-post-page .blog-markdown {
+  max-width: none;
 }
 
 /* Blog list page in grid layout */
@@ -2132,6 +2158,26 @@ button:focus-visible,
     padding-right: 24px;
   }
 
+  .head,
+  .index,
+  .work,
+  .blog,
+  .about,
+  .footer .copyright,
+  .widget,
+  .widget .shape-star {
+    --mw: 1100px !important;
+  }
+
+  .blog .blog-list,
+  .blog-post-page .blog .blog-list {
+    max-width: 100%;
+  }
+
+  .blog-post-page .blog .blog-left {
+    display: none;
+  }
+
   .about .about-info {
     gap: 40px;
   }
@@ -2150,6 +2196,17 @@ button:focus-visible,
   .footer {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .head,
+  .index,
+  .work,
+  .blog,
+  .about,
+  .footer .copyright,
+  .widget,
+  .widget .shape-star {
+    --mw: 960px !important;
   }
 
   .index .hello {
