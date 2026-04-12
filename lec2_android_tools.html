@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Android Pentest Environment Setup on macOS with Burp Suite</title>
+    <title>Lecture 2: Android Tools and ADB Basics</title>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="shortcut icon" href="./assets/public/favicon.svg">
 </head>
@@ -34,13 +34,13 @@
     </header>
 
     <main class="blog blog-post-page-content">
-        <section class="hero-section hero-guide">
+        <section class="hero-section hero-guide hero-guide-lec2">
             <div class="hero-overlay"></div>
             <div class="hero-content">
                 <div class="hero-kicker">Mobile Pentest</div>
-                <h1 class="hero-title">Android Pentest Setup on macOS</h1>
+                <h1 class="hero-title">Lecture 2: Android Tools and ADB Basics</h1>
                 <p class="hero-subtitle">
-                    End-to-end setup for Android Studio emulator, Burp certificate trust, and proxy routing validation.
+                    Enable developer settings, connect ADB, install APK files, and run core emulator commands.
                 </p>
             </div>
         </section>
@@ -51,148 +51,87 @@
                     <div class="blog-tags">
                         <a class="blog-tag" href="./blog.html?tag=pentest_mobile" data-tag="pentest_mobile">#pentest_mobile</a>
                         <a class="blog-tag" href="./blog.html?tag=android" data-tag="android">#android</a>
-                        <a class="blog-tag" href="./blog.html?tag=burp_suite" data-tag="burp_suite">#burp_suite</a>
-                        <a class="blog-tag" href="./blog.html?tag=macos" data-tag="macos">#macos</a>
+                        <a class="blog-tag" href="./blog.html?tag=adb" data-tag="adb">#adb</a>
                         <a class="blog-tag" href="./blog.html?tag=setup_guide" data-tag="setup_guide">#setup_guide</a>
-                        <a class="blog-tag" href="./blog.html?tag=certificate" data-tag="certificate">#certificate</a>
-                        <a class="blog-tag" href="./blog.html?tag=proxy" data-tag="proxy">#proxy</a>
+                        <a class="blog-tag" href="./blog.html?tag=lecture2" data-tag="lecture2">#lecture2</a>
                     </div>
 
                     <div class="info blog-meta">
                         <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="Author avatar"></div>
                         <div class="info-name">Phan Toan</div>
-                        <div class="info-time">2026-04-11</div>
+                        <div class="info-time">2026-04-12</div>
                     </div>
                 </div>
 
                 <div class="blog-post-layout">
                     <article class="blog-markdown" id="articleContent">
-                        <h1 id="overview">Android Pentest Environment Setup on macOS</h1>
-                        <p>This guide explains how to prepare an Android pentesting environment on macOS using Android Studio, an Android Virtual Device (AVD), and Burp Suite for traffic interception.</p>
+                        <h1 id="overview">Lecture 2: Android Tools and ADB Basics</h1>
+                        <p>This guide covers the core setup steps for Android testing with ADB on an emulator.</p>
 
-                        <h2 id="step-1">1. Download and Install Android Studio</h2>
-                        <p>Official download page:</p>
-                        <p><a href="https://developer.android.com/studio?hl=vi" target="_blank" rel="noopener noreferrer">https://developer.android.com/studio?hl=vi</a></p>
-                        <p>Use the default installation settings.</p>
-
+                        <h2 id="developer-mode">1. Enable Developer Mode and USB Debugging</h2>
+                        <p>On the emulator, tap the build/version field around 7-8 times to unlock Developer Options.</p>
                         <figure>
-                            <img src="./assets/public/blog_pentest_android/setup_process.png" alt="Android Studio setup process">
+                            <img src="./assets/public/lec2_android_tools/image-4.png" alt="Enable Developer mode" style="width: 320px; max-width: 100%; height: auto;">
+                        </figure>
+                        <p>Open <code>Developer options</code>, enable <code>USB debugging</code>, and allow ADB communication from your host machine.</p>
+                        <figure>
+                            <img src="./assets/public/lec2_android_tools/image-5.png" alt="Enable USB debugging" style="width: 320px; max-width: 100%; height: auto;">
                         </figure>
 
-                        <h2 id="step-2">2. Set Up an Android Virtual Device</h2>
-                        <p>After Android Studio is installed, open <code>More Actions</code> and select <code>Virtual Device Manager</code> to create an emulator.</p>
+                        <h2 id="adb-connectivity">2. Validate ADB Connectivity</h2>
+                        <p>Check whether the emulator is visible to ADB:</p>
+                        <pre><code class="language-commandline">adb devices</code></pre>
                         <figure>
-                            <img src="./assets/public/blog_pentest_android/virtual_device_menu.png" alt="Virtual Device Manager menu">
-                        </figure>
-                        <p>Recommended emulator configuration:</p>
-                        <ul>
-                            <li>Device: Pixel 6</li>
-                            <li>API Level: 31</li>
-                            <li>RAM: 4 GB</li>
-                            <li>Internal Storage: 30 GB</li>
-                        </ul>
-                        <figure>
-                            <img src="./assets/public/blog_pentest_android/avd_recommendation.png" alt="AVD recommendation">
-                        </figure>
-                        <figure>
-                            <img src="./assets/public/blog_pentest_android/avd_create.png" alt="AVD creation options">
-                        </figure>
-                        <p>Start the virtual phone once to verify it boots correctly, then shut it down before the next step.</p>
-                        <figure>
-                            <img
-                                    src="./assets/public/blog_pentest_android/android_emulator_setup.png"
-                                    alt="Android emulator startup"
-                                    style="width: 320px; max-width: 100%; height: auto;"
-                            >
+                            <img src="./assets/public/lec2_android_tools/adb_device.png" alt="ADB devices output">
                         </figure>
 
-                        <h2 id="step-3">3. Install the Burp Certificate</h2>
-                        <p>For HTTPS interception, Burp Suite needs a trusted CA certificate on the emulator.</p>
+                        <p>Restart ADB daemon as root on the emulator:</p>
+                        <pre><code class="language-commandline">adb devices
+adb root</code></pre>
+                        <p>If you see <code>restarting adbd as root</code>, the command succeeded.</p>
+
+                        <h2 id="install-apk">3. Install APK via ADB</h2>
+                        <p>Sample APK: <a href="https://github.com/dineshshetty/Android-InsecureBankv2/blob/master/InsecureBankv2.apk" target="_blank" rel="noopener noreferrer">InsecureBankv2.apk</a></p>
+                        <pre><code class="language-commandline">adb install /path/to/apkfile</code></pre>
                         <figure>
-                            <img src="./assets/public/blog_pentest_android/burp_certificate_export.png" alt="Burp certificate export">
+                            <img src="./assets/public/lec2_android_tools/Screenshot%202026-04-11%20at%2015.03.56.png" alt="Install APK command">
+                        </figure>
+                        <p>Run this from the APK directory or provide a full absolute path.</p>
+                        <figure>
+                            <img src="./assets/public/lec2_android_tools/Screenshot%202026-04-11%20at%2015.06.35.png" alt="InsecureBankv2 installed on emulator" style="width: 320px; max-width: 100%; height: auto;">
                         </figure>
 
-                        <p>Compute the hash value: <code>9a5ba575</code></p>
+                        <h2 id="adb-commands">4. Essential ADB Commands</h2>
+                        <p>Open an interactive shell on the device:</p>
+                        <pre><code class="language-commandline">adb shell</code></pre>
                         <figure>
-                            <img src="./assets/public/blog_pentest_android/certificate_hash_output.png" alt="Certificate hash output">
+                            <img src="./assets/public/lec2_android_tools/image-2.png" alt="ADB shell session">
                         </figure>
 
-                        <p>Check available AVDs:</p>
-                        <pre><code>~/Library/Android/sdk/emulator/emulator -list-avds</code></pre>
-
-                        <p>Add <code>emulator</code> and <code>platform-tools</code> to your PATH:</p>
-                        <pre><code>nano ~/.zshrc</code></pre>
-                        <pre><code>export PATH=$PATH:~/Library/Android/sdk/emulator:~/Library/Android/sdk/platform-tools</code></pre>
-                        <p>Save with <code>Control + O</code>, exit with <code>Control + X</code>, then apply:</p>
-                        <pre><code>source ~/.zshrc</code></pre>
-
-                        <p>Run emulator commands:</p>
-                        <pre><code>emulator -list-avds
-emulator -writable-system -avd &lt;your_avd_name&gt;</code></pre>
-
-                        <p>Install the PortSwigger certificate:</p>
-                        <pre><code>adb root
-adb shell avbctl disable-verification
-adb disable-verity
-adb reboot</code></pre>
-                        <p>Wait for reboot, then run:</p>
-                        <pre><code>adb root
-adb remount</code></pre>
-
-                        <p>Rename <code>9a5ba575.pem</code> to <code>9a5ba575.0</code>, then run:</p>
-                        <pre><code>adb push 9a5ba575.0 /system/etc/security/cacerts/
-adb shell chmod 644 /system/etc/security/cacerts/9a5ba575.0</code></pre>
-
-                        <p>Verify certificate installation at:</p>
-                        <p><code>Settings -&gt; Security -&gt; Encryption &amp; credentials -&gt; Trusted credentials</code></p>
+                        <p>View logs:</p>
+                        <pre><code class="language-commandline">adb logcat</code></pre>
                         <figure>
-                            <img src="./assets/public/blog_pentest_android/trusted_credentials_verify.png" alt="Trusted credentials verification" style="width: 320px; max-width: 100%; height: auto;">
+                            <img src="./assets/public/lec2_android_tools/image-1.png" alt="ADB logcat output">
                         </figure>
 
-                        <h2 id="step-4">4. Configure the Proxy</h2>
-                        <p>Go to <code>Settings -&gt; Proxy</code>, select <code>Manual</code>, and configure the same proxy values used in Burp Suite.</p>
+                        <p>Upload a file from host to device:</p>
+                        <pre><code class="language-commandline">adb push &lt;/path/to/file/on/host&gt; &lt;/path/to/file/on/device&gt;</code></pre>
                         <figure>
-                            <img src="./assets/public/blog_pentest_android/proxy_setting_emulator.png" alt="Proxy settings in emulator">
+                            <img src="./assets/public/lec2_android_tools/image-3.png" alt="ADB push command">
                         </figure>
 
-                        <p>Set Burp listener to <code>All interfaces</code>.</p>
-                        <figure>
-                            <img src="./assets/public/blog_pentest_android/burp_all_interfaces.png" alt="Burp listener all interfaces">
-                        </figure>
-
-                        <p>Use the emulator host mapping:</p>
-                        <ul>
-                            <li>Proxy hostname: <code>10.0.2.2</code></li>
-                            <li>Proxy port: <code>8080</code> (or your Burp port)</li>
-                        </ul>
-
-                        <p>Android settings path:</p>
-                        <p><code>Settings -&gt; Network &amp; internet -&gt; Internet -&gt; Gear icon next to AndroidWifi -&gt; Edit (pencil) -&gt; Advanced options -&gt; Proxy: Manual</code></p>
-
-                        <figure>
-                            <img src="./assets/public/blog_pentest_android/manual_setup.png" alt="Manual proxy setup on Android" style="width: 320px; max-width: 100%; height: auto;">
-                        </figure>
-
-                        <h2 id="validation">Validation</h2>
-                        <p>Open <code>http://burp</code> from the emulator to validate routing.</p>
-                        <figure>
-                            <img src="./assets/public/blog_pentest_android/burp_test_page.png" alt="Burp test page">
-                        </figure>
-                        <p>If successful, requests will appear in Burp Suite.</p>
-                        <figure>
-                            <img src="./assets/public/blog_pentest_android/request_capture_in_burp_suite.png" alt="Requests captured in Burp Suite">
-                        </figure>
+                        <p>Download a file from device to host:</p>
+                        <pre><code class="language-commandline">adb pull &lt;/path/to/file/on/device&gt; &lt;/path/to/file/on/host&gt;</code></pre>
                     </article>
 
                     <aside class="blog-toc-wrap" aria-label="Table of contents">
                         <div class="blog-toc-title">Contents</div>
                         <nav class="blog-toc" id="blogTocNav">
                             <a class="toc-link level-1" href="#overview">Overview</a>
-                            <a class="toc-link level-1" href="#step-1">1. Install Android Studio</a>
-                            <a class="toc-link level-1" href="#step-2">2. Set Up AVD</a>
-                            <a class="toc-link level-1" href="#step-3">3. Install Certificate</a>
-                            <a class="toc-link level-1" href="#step-4">4. Configure Proxy</a>
-                            <a class="toc-link level-1" href="#validation">Validation</a>
+                            <a class="toc-link level-1" href="#developer-mode">1. Developer Mode</a>
+                            <a class="toc-link level-1" href="#adb-connectivity">2. ADB Connectivity</a>
+                            <a class="toc-link level-1" href="#install-apk">3. Install APK</a>
+                            <a class="toc-link level-1" href="#adb-commands">4. ADB Commands</a>
                         </nav>
                     </aside>
                 </div>

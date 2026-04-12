@@ -3,9 +3,156 @@ let copyTimeout;
 document.addEventListener("DOMContentLoaded", function () {
   initHeaderState();
   initMenuToggle();
+  initBlogFilters();
   initEmailCopy();
   initCodeCopy();
 });
+
+function initBlogFilters() {
+  const blogList = document.querySelector(".blog .blog-list");
+  const tagFilter = document.querySelector(".blog-filter-toolbar .blog-tag-filter");
+  const sortFilter = document.querySelector(".blog-filter-toolbar .blog-sort-filter");
+  if (!blogList || !tagFilter || !sortFilter) return;
+
+  const items = Array.from(blogList.querySelectorAll(".item"));
+  const tagLinks = Array.from(tagFilter.querySelectorAll(".blog-tag[data-tag]"));
+  const sortLinks = Array.from(sortFilter.querySelectorAll(".blog-sort-chip[data-sort]"));
+  if (!items.length || !tagLinks.length || !sortLinks.length) return;
+
+  const allowedSortValues = new Set(["newest", "oldest"]);
+  const url = new URL(window.location.href);
+  let activeTag = (url.searchParams.get("tag") || "all").trim();
+  let activeSort = (url.searchParams.get("sort") || "newest").trim();
+
+  if (!tagLinks.some((link) => link.dataset.tag === activeTag)) {
+    activeTag = "all";
+  }
+  if (!allowedSortValues.has(activeSort)) {
+    activeSort = "newest";
+  }
+
+  const parseDate = (value) => {
+    const source = String(value || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(source)) return null;
+    const parsed = new Date(`${source}T00:00:00Z`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const itemTags = (item) => {
+    const raw = item.getAttribute("data-tags") || "";
+    return raw
+      .split(/\s+/)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  };
+
+  const itemDate = (item) => {
+    const fromData = parseDate(item.getAttribute("data-date"));
+    if (fromData) return fromData;
+    const fromText = item.querySelector(".info-time")?.textContent || "";
+    return parseDate(fromText);
+  };
+
+  const setActiveTagUI = () => {
+    tagLinks.forEach((link) => {
+      const isActive = link.dataset.tag === activeTag;
+      link.classList.toggle("active", isActive);
+      link.setAttribute("aria-current", isActive ? "true" : "false");
+    });
+  };
+
+  const setActiveSortUI = () => {
+    sortLinks.forEach((link) => {
+      const isActive = link.dataset.sort === activeSort;
+      link.classList.toggle("active", isActive);
+      link.setAttribute("aria-current", isActive ? "true" : "false");
+    });
+  };
+
+  const syncTagHrefs = () => {
+    tagLinks.forEach((link) => {
+      const tag = (link.dataset.tag || "all").trim();
+      const target = new URL(window.location.pathname, window.location.origin);
+      if (tag !== "all") target.searchParams.set("tag", tag);
+      if (activeSort !== "newest") target.searchParams.set("sort", activeSort);
+      link.setAttribute("href", `${target.pathname}${target.search}`);
+    });
+  };
+
+  const syncSortHrefs = () => {
+    sortLinks.forEach((link) => {
+      const sort = (link.dataset.sort || "newest").trim();
+      const target = new URL(window.location.pathname, window.location.origin);
+      if (activeTag !== "all") target.searchParams.set("tag", activeTag);
+      if (sort !== "newest") target.searchParams.set("sort", sort);
+      link.setAttribute("href", `${target.pathname}${target.search}`);
+    });
+  };
+
+  const sortItemsByDate = () => {
+    const sorted = [...items].sort((a, b) => {
+      const aDate = itemDate(a);
+      const bDate = itemDate(b);
+      const aTime = aDate ? aDate.getTime() : 0;
+      const bTime = bDate ? bDate.getTime() : 0;
+      if (activeSort === "oldest") return aTime - bTime;
+      return bTime - aTime;
+    });
+
+    sorted.forEach((item) => {
+      blogList.appendChild(item);
+    });
+  };
+
+  const applyFilters = () => {
+    sortItemsByDate();
+
+    items.forEach((item) => {
+      const tags = itemTags(item);
+      const matchesTag = activeTag === "all" || tags.includes(activeTag);
+      item.hidden = !matchesTag;
+    });
+
+    setActiveTagUI();
+    setActiveSortUI();
+    syncTagHrefs();
+    syncSortHrefs();
+
+    const next = new URL(window.location.href);
+    if (activeTag === "all") {
+      next.searchParams.delete("tag");
+    } else {
+      next.searchParams.set("tag", activeTag);
+    }
+    if (activeSort === "newest") {
+      next.searchParams.delete("sort");
+    } else {
+      next.searchParams.set("sort", activeSort);
+    }
+    const nextUrl = `${next.pathname}${next.search}${next.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  };
+
+  tagLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const clickedTag = (link.dataset.tag || "all").trim();
+      activeTag = clickedTag || "all";
+      applyFilters();
+    });
+  });
+
+  sortLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const clickedSort = (link.dataset.sort || "newest").trim();
+      activeSort = allowedSortValues.has(clickedSort) ? clickedSort : "newest";
+      applyFilters();
+    });
+  });
+
+  applyFilters();
+}
 
 function initHeaderState() {
   const header = document.querySelector(".head");
@@ -174,18 +321,48 @@ function initCodeCopy() {
     button.className = "code-copy-btn";
     button.textContent = "Copy";
     button.setAttribute("aria-label", "Copy code block");
+    button.title = "Copy code block";
     wrapper.appendChild(button);
 
     let buttonTimeout;
 
-    const setButtonState = (text, copied) => {
+    const resetButtonState = () => {
+      button.classList.remove("copied", "failed");
+      button.setAttribute("aria-label", "Copy code block");
+      button.title = "Copy code block";
+    };
+
+    const setButtonState = (state) => {
       clearTimeout(buttonTimeout);
-      button.textContent = text;
-      button.classList.toggle("copied", copied);
-      buttonTimeout = setTimeout(() => {
-        button.textContent = "Copy";
+
+      if (state === "copied") {
+        button.classList.add("copied");
+        button.classList.remove("failed");
+        button.setAttribute("aria-label", "Copied");
+        button.title = "Copied";
+        buttonTimeout = setTimeout(resetButtonState, 1400);
+        return;
+      }
+
+      if (state === "failed") {
+        button.classList.add("failed");
         button.classList.remove("copied");
-      }, 1400);
+        button.setAttribute("aria-label", "Copy failed");
+        button.title = "Copy failed";
+        buttonTimeout = setTimeout(resetButtonState, 1400);
+        return;
+      }
+
+      if (state === "empty") {
+        button.classList.add("failed");
+        button.classList.remove("copied");
+        button.setAttribute("aria-label", "No code to copy");
+        button.title = "No code to copy";
+        buttonTimeout = setTimeout(resetButtonState, 1400);
+        return;
+      }
+
+      resetButtonState();
     };
 
     const fallbackCopy = (text) => {
@@ -204,7 +381,7 @@ function initCodeCopy() {
     button.addEventListener("click", async () => {
       const code = pre.dataset.rawCode || pre.innerText || "";
       if (!code.trim()) {
-        setButtonState("No code", false);
+        setButtonState("empty");
         return;
       }
 
@@ -222,7 +399,7 @@ function initCodeCopy() {
         copied = fallbackCopy(code);
       }
 
-      setButtonState(copied ? "Copied" : "Failed", copied);
+      setButtonState(copied ? "copied" : "failed");
     });
   });
 }
