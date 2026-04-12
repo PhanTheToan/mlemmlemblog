@@ -1,183 +1,144 @@
 <!DOCTYPE html>
-<html lang="zh-CN" style="color-scheme: dark;">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phan The Toan - Security Portfolio</title>
     <link rel="stylesheet" href="./css/style.css">
-    <link rel="shortcut icon" href="./assets/public/favicon.svg"/>
-    <script src="https://unpkg.com/typed.js@2.0.16/dist/typed.umd.js"></script>
+    <link rel="shortcut icon" href="./assets/public/favicon.svg">
 </head>
 <body>
-    <canvas class="fireworks"></canvas>
-    <div class="head">
+    <header class="head">
         <div class="main">
-            <a href="./index.html" class="logo"><img src="./assets/public/logo_text.svg"></a>
-            <div class="menu">
-                <li class="magical btn nav" onclick="window.location.href='./index.html'">Home</li>
-                <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
-                <li class="magical btn" onclick="window.location.href='./blog.html'">Blog</li>
-                <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
-            </div>
-            <div class="menu" id="menu-expand">
-                <li class="magical btn skin" id="menu-expand-child"><i class="icon menu-icon"></i></li>
-            </div>
+            <a href="./index.html" class="logo">PHAN THE TOAN</a>
+            <ul class="menu">
+                <li class="btn nav" onclick="window.location.href='./index.html'">Home</li>
+                <li class="btn" onclick="window.location.href='./work.html'">Work</li>
+                <li class="btn" onclick="window.location.href='./blog.html'">Blog</li>
+                <li class="btn" onclick="window.location.href='./about.html'">About</li>
+            </ul>
+            <ul class="menu" id="menu-expand">
+                <li class="btn skin" id="menu-expand-child" aria-label="Toggle navigation">
+                    <i class="icon menu-icon" aria-hidden="true"></i>
+                </li>
+            </ul>
             <div id="menu-panel" hidden>
-                <div class="menu-panel-content">
-                    <li class="magical btn nav" onclick="window.location.href='./index.html'">Home</li>
-                    <li class="magical btn" onclick="window.location.href='./work.html'">Work</li>
-                    <li class="magical btn" onclick="window.location.href='./blog.html'">Blog</li>
-                    <li class="magical btn" onclick="window.location.href='./about.html'">About</li>
+                <ul class="menu-panel-content">
+                    <li class="btn nav" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="btn" onclick="window.location.href='./work.html'">Work</li>
+                    <li class="btn" onclick="window.location.href='./blog.html'">Blog</li>
+                    <li class="btn" onclick="window.location.href='./about.html'">About</li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="index">
+        <section class="hero-section hero-home">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-kicker">Application Security Portfolio</div>
+                <h1 class="hero-title">Phan The Toan</h1>
+                <p class="hero-subtitle">
+                    Information Security Engineer focused on web penetration testing, secure backend development,
+                    vulnerability assessment, and remediation validation on real-world systems.
+                </p>
+                <div class="hero-actions">
+                    <a class="cta-btn cta-btn-primary" href="./work.html">View Projects</a>
+                    <a class="cta-btn cta-btn-secondary" href="./assets/public/PTT_CV.pdf" target="_blank" rel="noopener noreferrer">Download CV</a>
                 </div>
             </div>
-        </div>
-        <blockquote><img src="./assets/public/logo.svg"></blockquote>
-    </div>
-    <div class="index">
-        <div class="hello">
-            <div class="title">
-                <div class="title-hi">Hi, I'm</div>
-                <a class="title-name" href="./about.html">Phan The Toan</a>
-            </div>
-            <div class="hello-desc" id="typed"></div>
-        </div>
-        <div class="content-divider"></div>
-        <div class="quickly-link">
+        </section>
+
+        <section class="quickly-link">
             <div class="title-hi">Security Portfolio Highlights</div>
-            <div class="loader"></div>
             <div class="link-card">
-                <div class="link-card-list">
-                    <div class="magical link-card-item">
+                <ul class="link-card-list">
+                    <li class="link-card-item">
                         <a href="./about.html">
                             <img src="./assets/index/yuque.png" alt="Profile">
                             <div class="info">
                                 <div class="info-title">Profile</div>
                                 <div class="info-desc">Summary, education, and certifications</div>
                             </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                            <span class="icon-arrow" aria-hidden="true">→</span>
                         </a>
-                    </div>
-                    <div class="magical link-card-item">
+                    </li>
+                    <li class="link-card-item">
                         <a href="./work.html">
                             <img src="./assets/index/larkmap.png" alt="Projects">
                             <div class="info">
                                 <div class="info-title">Projects</div>
                                 <div class="info-desc">Internship and security engineering works</div>
                             </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                            <span class="icon-arrow" aria-hidden="true">→</span>
                         </a>
-                    </div>
-                    <div class="magical link-card-item">
+                    </li>
+                    <li class="link-card-item">
                         <a href="./blog.html">
                             <img src="./assets/index/adapter.png" alt="Blog">
                             <div class="info">
                                 <div class="info-title">Security Blog</div>
-                                <div class="info-desc">New macOS Android pentest setup guide is now published</div>
+                                <div class="info-desc">Technical writeups and pentest setup guides</div>
                             </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                            <span class="icon-arrow" aria-hidden="true">→</span>
                         </a>
-                    </div>
-                    <div class="magical link-card-item">
-                        <a href="./assets/public/PTT_CV.pdf" target="_blank">
+                    </li>
+                    <li class="link-card-item">
+                        <a href="./assets/public/PTT_CV.pdf" target="_blank" rel="noopener noreferrer">
                             <img src="./assets/index/rpb.png" alt="CV">
                             <div class="info">
                                 <div class="info-title">Download CV</div>
-                                <div class="info-desc">Latest CV (updated 2026)</div>
+                                <div class="info-desc">Latest profile update (2026)</div>
                             </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                            <span class="icon-arrow" aria-hidden="true">→</span>
                         </a>
-                    </div>
-                    <div class="magical link-card-item">
-                        <a href="https://github.com/PhanTheToan" target="_blank">
+                    </li>
+                    <li class="link-card-item">
+                        <a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">
                             <img src="./assets/index/github.png" alt="GitHub">
                             <div class="info">
                                 <div class="info-title">GitHub</div>
-                                <div class="info-desc">Code repositories and security projects</div>
+                                <div class="info-desc">Repositories and proof-of-concept work</div>
                             </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                            <span class="icon-arrow" aria-hidden="true">→</span>
                         </a>
-                    </div>
-                    <div class="magical link-card-item">
-                        <a href="https://linkedin.com/in/phantoan3094" target="_blank">
+                    </li>
+                    <li class="link-card-item">
+                        <a href="https://linkedin.com/in/phantoan3094" target="_blank" rel="noopener noreferrer">
                             <img src="./assets/index/figma.png" alt="LinkedIn">
                             <div class="info">
                                 <div class="info-title">LinkedIn</div>
-                                <div class="info-desc">Professional profile and updates</div>
+                                <div class="info-desc">Professional updates and experience</div>
                             </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                            <span class="icon-arrow" aria-hidden="true">→</span>
                         </a>
-                    </div>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" fill="none">
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M3.5 8V0H4.5V8H3.5Z" fill="#62616F"></path>
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M8 4.5H0V3.5H8V4.5Z" fill="#62616F"></path>
-                </svg>
-                <div class="link-card-list">
-                    <div class="magical link-card-item">
-                        <a href="./blog.html">
-                            <img src="./assets/index/qingicon.png" alt="Blog status">
-                            <div class="info">
-                                <div class="info-title">Blog Status</div>
-                                <div class="info-desc">Active with new technical setup writeups</div>
-                            </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="section-block">
+            <div class="section-inner">
+                <h2 class="section-heading">Focus Areas</h2>
+                <div class="category-grid">
+                    <a class="category-card category-card-pentest" href="./work.html" aria-label="Web penetration testing">
+                        <span>Web Penetration Testing</span>
+                    </a>
+                    <div class="category-stack">
+                        <a class="category-card category-card-appsec" href="./work.html" aria-label="Application security workflow">
+                            <span>Application Security Workflow</span>
                         </a>
-                    </div>
-                    <div class="magical link-card-item">
-                        <a href="./work.html">
-                            <img src="./assets/index/figicon.png" alt="Work portfolio">
-                            <div class="info">
-                                <div class="info-title">Work Portfolio</div>
-                                <div class="info-desc">Project overview without blog writeups</div>
-                            </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="magical link-card-item">
-                        <a href="./about.html">
-                            <img src="./assets/index/dippermap.png" alt="Experience">
-                            <div class="info">
-                                <div class="info-title">Experience</div>
-                                <div class="info-desc">Internship history and security assessment scope</div>
-                            </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="magical link-card-item">
-                        <a href="./assets/public/PTT_CV.pdf" target="_blank">
-                            <img src="./assets/index/biliui.png" alt="CV overview">
-                            <div class="info">
-                                <div class="info-title">Career Snapshot</div>
-                                <div class="info-desc">Download CV and view latest profile updates</div>
-                            </div>
-                            <div class="icon icon-arrow">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.55 7.58332H1.16663V6.41665H10.55L7.75415 3.62082L8.5791 2.79587L12.1645 6.3813C12.5062 6.72299 12.5062 7.27701 12.1645 7.61873L8.5791 11.2042L7.75415 10.3792L10.55 7.58332Z" fill="#B3B3C1"></path></svg>
-                            </div>
+                        <a class="category-card category-card-mobile" href="./set_up_av_phone_for_pentest_android.html" aria-label="Mobile pentest setup guide">
+                            <span>Mobile Pentest Setup Guide</span>
                         </a>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="footer">
+        </section>
+    </main>
+
+    <footer class="footer">
         <div class="copyright">
             <div>© 2026 Portfolio by <a href="./about.html">Phan The Toan</a></div>
             <span>|</span>
@@ -186,37 +147,11 @@
             </div>
             <span>|</span>
             <div class="friends">
-                <a href="https://github.com/PhanTheToan" target="_blank">GitHub</a>
+                <a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">GitHub</a>
             </div>
         </div>
-    </div>
-    <div class="widget">
-        <div class="shape-light"></div>
-        <div class="shape-star">
-            <div class="rising-stars rising-stars-visible">
-                <div style="height:1px;width:1px"></div>
-                <div style="height:2px;width:2px"></div>
-                <div style="height:1px;width:1px"></div>
-            </div>
-        </div>
-        <div class="shape-earth"></div>
-    </div>
+    </footer>
+
+    <script src="./js/main.min.js"></script>
 </body>
-<script>
-    const options = {
-        strings: [
-            ">_ information security engineer ^1000",
-            ">_ web pentesting and secure backend development ^1000",
-        ],
-        typeSpeed: 50,
-        backSpeed: 20,
-        startDelay: 300,
-        loop: true,
-        showCursor: false,
-    };
-    const typed = new Typed('#typed', options);
-</script>
-<script src="./js/main.min.js"></script>
-<script src='./js/anime.js'></script>
-<script src='./js/firework.js'></script>
 </html>
