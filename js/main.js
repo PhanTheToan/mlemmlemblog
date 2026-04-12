@@ -4,9 +4,61 @@ document.addEventListener("DOMContentLoaded", function () {
   initHeaderState();
   initMenuToggle();
   initBlogFilters();
+  initVisitCounter();
   initEmailCopy();
   initCodeCopy();
 });
+
+function initVisitCounter() {
+  const footerMeta = document.querySelector(".footer .copyright");
+  if (!footerMeta) return;
+
+  const counter = document.createElement("div");
+  counter.className = "visit-counter";
+  counter.setAttribute("aria-live", "polite");
+  counter.innerHTML = `
+    <span class="visit-counter-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M12 5C6.5 5 2.03 8.11.25 12c1.78 3.89 6.25 7 11.75 7s9.97-3.11 11.75-7C21.97 8.11 17.5 5 12 5Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2.2a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"></path>
+      </svg>
+    </span>
+    <div class="visit-counter-label">Total</div>
+    <div class="visit-counter-value" data-visit="total">...</div>
+    <div class="visit-counter-divider" aria-hidden="true"></div>
+    <div class="visit-counter-label">This page</div>
+    <div class="visit-counter-value" data-visit="page">...</div>
+  `;
+  footerMeta.appendChild(counter);
+
+  const totalEl = counter.querySelector('[data-visit="total"]');
+  const pageEl = counter.querySelector('[data-visit="page"]');
+  if (!totalEl || !pageEl) return;
+
+  const hostname = (window.location.hostname || "local").toLowerCase();
+  const namespace = `phantoan-${hostname.replace(/[^a-z0-9-]/g, "-") || "site"}`;
+  const path = (window.location.pathname || "/").toLowerCase();
+  const pageKey = `page-${path.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "home"}`;
+
+  const formatCount = (value) => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+    return new Intl.NumberFormat("en-US").format(value);
+  };
+
+  const updateCount = async (key, target) => {
+    const endpoint = `https://api.countapi.xyz/hit/${encodeURIComponent(namespace)}/${encodeURIComponent(key)}`;
+    try {
+      const response = await fetch(endpoint, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      target.textContent = formatCount(payload && payload.value);
+    } catch (_) {
+      target.textContent = "--";
+    }
+  };
+
+  updateCount("total-visits", totalEl);
+  updateCount(pageKey, pageEl);
+}
 
 function initBlogFilters() {
   const blogList = document.querySelector(".blog .blog-list");

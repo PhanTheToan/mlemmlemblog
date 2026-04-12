@@ -13,9 +13,7 @@
             <a href="./index.html" class="logo">PHAN TOAN</a>
             <ul class="menu">
                 <li class="btn nav" onclick="window.location.href='./index.html'">Home</li>
-                <li class="btn" onclick="window.location.href='./work.html'">Work</li>
                 <li class="btn" onclick="window.location.href='./blog.html'">Blog</li>
-                <li class="btn" onclick="window.location.href='./about.html'">About</li>
             </ul>
             <ul class="menu" id="menu-expand">
                 <li class="btn skin" id="menu-expand-child" aria-label="Toggle navigation">
@@ -25,108 +23,181 @@
             <div id="menu-panel" hidden>
                 <ul class="menu-panel-content">
                     <li class="btn nav" onclick="window.location.href='./index.html'">Home</li>
-                    <li class="btn" onclick="window.location.href='./work.html'">Work</li>
                     <li class="btn" onclick="window.location.href='./blog.html'">Blog</li>
-                    <li class="btn" onclick="window.location.href='./about.html'">About</li>
                 </ul>
             </div>
         </div>
     </header>
 
-    <main class="index">
+    <main class="index about">
         <section class="hello" aria-labelledby="indexHelloTitle">
             <div class="title" id="indexHelloTitle">
                 <div class="title-hi">Hi, I'm</div>
-                <a class="title-name" href="./about.html">Phan Toan</a>
+                <a class="title-name" href="./index.html">Phan Toan</a>
             </div>
             <p class="hello-desc">
                 <span class="hello-typed">Information Security Engineer</span>
             </p>
         </section>
 
-        <section class="quickly-link">
-            <div class="title-hi">Security Portfolio Highlights</div>
-            <div class="link-card">
-                <ul class="link-card-list">
-                    <li class="link-card-item">
-                        <a href="./about.html">
-                            <img src="./assets/index/yuque.png" alt="Profile">
-                            <div class="info">
-                                <div class="info-title">Profile</div>
-                                <div class="info-desc">Summary, education, and certifications</div>
+        <section class="about-top">
+            <div class="about-info">
+                <div class="about-info-left">
+                    <div class="about-info-title">Summary</div>
+                    <div class="introduce-desc">
+                        Information Security Engineer with hands-on experience in web application security assessment and penetration testing on real-world systems.<br><br>
+                        Strong foundation in network, system, and application security with practical expertise in vulnerability analysis, security review, and remediation collaboration.<br><br>
+                        Currently studying Computer Engineering at Hanoi University of Science and Technology (HUST), expected graduation in 2026.
+                    </div>
+                </div>
+                <div class="about-info-right">
+                    <div class="contact">
+                        <div class="about-info-title">Contact</div>
+                        <div class="contact-desc">
+                            <div class="list">
+                                <div class="list-label">Email:</div>
+                                <div class="list-value" id="email" tabindex="0" role="button" title="Click to copy email">
+                                    <a id="emailCopied">ptt.hust.dev@gmail.com</a>
+                                </div>
+                                <span class="list-value copied">copied ✓</span>
                             </div>
-                            <span class="icon-arrow" aria-hidden="true">→</span>
+                            <div class="list">
+                                <div class="list-label">Phone:</div>
+                                <div class="list-value"><a href="tel:+84967998722">(+84) 967-998-722</a></div>
+                            </div>
+                            <div class="list">
+                                <div class="list-label">GitHub:</div>
+                                <div class="list-value"><a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">github.com/PhanTheToan ↗</a></div>
+                            </div>
+                            <div class="list">
+                                <div class="list-label">LinkedIn:</div>
+                                <div class="list-value"><a href="https://linkedin.com/in/phantoan3094" target="_blank" rel="noopener noreferrer">linkedin.com/in/phantoan3094 ↗</a></div>
+                            </div>
+                            <div class="list">
+                                <div class="list-label">Facebook:</div>
+                                <div class="list-value"><a href="https://facebook.com/lozenkyo.a" target="_blank" rel="noopener noreferrer">fb/lozenkyo.a ↗</a></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-middle">
+            <div class="power">
+                <ul class="list-01">
+                    <li class="power-card">
+                        <a>
+                            <div class="card-img" style="background-image: url('./assets/about/abstract.svg')"></div>
+                            <div class="card-text">Web penetration testing (black-box and white-box)</div>
                         </a>
                     </li>
-                    <li class="link-card-item">
-                        <a href="./work.html">
-                            <img src="./assets/index/larkmap.png" alt="Projects">
-                            <div class="info">
-                                <div class="info-title">Projects</div>
-                                <div class="info-desc">Internship and security engineering works</div>
-                            </div>
-                            <span class="icon-arrow" aria-hidden="true">→</span>
+                    <li class="power-card">
+                        <a>
+                            <div class="card-img" style="background-image: url('./assets/about/menu.svg')"></div>
+                            <div class="card-text">OWASP Top 10 analysis and exploitation</div>
                         </a>
                     </li>
-                    <li class="link-card-item">
-                        <a href="./blog.html">
-                            <img src="./assets/index/adapter.png" alt="Blog">
-                            <div class="info">
-                                <div class="info-title">Security Blog</div>
-                                <div class="info-desc">Technical writeups and pentest setup guides</div>
-                            </div>
-                            <span class="icon-arrow" aria-hidden="true">→</span>
+                    <li class="power-card">
+                        <a>
+                            <div class="card-img" style="background-image: url('./assets/about/code.svg')"></div>
+                            <div class="card-text">Java, Python, Bash, C/C++ secure coding</div>
                         </a>
                     </li>
-                    <li class="link-card-item">
-                        <a href="./assets/public/PTT_CV.pdf" target="_blank" rel="noopener noreferrer">
-                            <img src="./assets/index/rpb.png" alt="CV">
-                            <div class="info">
-                                <div class="info-title">Download CV</div>
-                                <div class="info-desc">Latest profile update (2026)</div>
-                            </div>
-                            <span class="icon-arrow" aria-hidden="true">→</span>
+                    <li class="power-card">
+                        <a>
+                            <div class="card-img" style="background-image: url('./assets/about/pin.svg')"></div>
+                            <div class="card-text">Burp Suite, FFUF, Nmap, Gobuster, Arjun</div>
                         </a>
                     </li>
-                    <li class="link-card-item">
-                        <a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">
-                            <img src="./assets/index/github.png" alt="GitHub">
-                            <div class="info">
-                                <div class="info-title">GitHub</div>
-                                <div class="info-desc">Repositories and proof-of-concept work</div>
-                            </div>
-                            <span class="icon-arrow" aria-hidden="true">→</span>
-                        </a>
-                    </li>
-                    <li class="link-card-item">
-                        <a href="https://linkedin.com/in/phantoan3094" target="_blank" rel="noopener noreferrer">
-                            <img src="./assets/index/figma.png" alt="LinkedIn">
-                            <div class="info">
-                                <div class="info-title">LinkedIn</div>
-                                <div class="info-desc">Professional updates and experience</div>
-                            </div>
-                            <span class="icon-arrow" aria-hidden="true">→</span>
+                    <li class="power-card">
+                        <a>
+                            <div class="card-img" style="background-image: url('./assets/about/pen.svg')"></div>
+                            <div class="card-text">CVSS reporting and remediation collaboration</div>
                         </a>
                     </li>
                 </ul>
             </div>
         </section>
 
-        <section class="section-block">
-            <div class="section-inner">
-                <h2 class="section-heading">Focus Areas</h2>
-                <div class="category-grid">
-                    <a class="category-card category-card-pentest" href="./work.html" aria-label="Web penetration testing">
-                        <span>Web Penetration Testing</span>
-                    </a>
-                    <div class="category-stack">
-                        <a class="category-card category-card-appsec" href="./work.html" aria-label="Application security workflow">
-                            <span>Application Security Workflow</span>
-                        </a>
-                        <a class="category-card category-card-mobile" href="./set_up_av_phone_for_pentest_android.html" aria-label="Mobile pentest setup guide">
-                            <span>Mobile Pentest Setup Guide</span>
-                        </a>
-                    </div>
+        <section class="about-bottom">
+            <h2 class="section-heading">Experience Timeline</h2>
+            <div class="about-horizontal-timeline" id="aboutExperienceTimeline">
+                <div class="about-timepoint-track" role="tablist" aria-label="Experience timeline" aria-orientation="horizontal">
+                    <button class="about-timepoint is-active" type="button" role="tab" id="exp-tab-weamis" aria-selected="true" aria-controls="exp-panel-weamis" tabindex="0">
+                        <span class="about-timepoint-date">Dec 2024 - Jun 2025</span>
+                        <span class="about-timepoint-label">Weamis</span>
+                    </button>
+                    <button class="about-timepoint" type="button" role="tab" id="exp-tab-cyradar" aria-selected="false" aria-controls="exp-panel-cyradar" tabindex="-1">
+                        <span class="about-timepoint-date">Jul 2025 - Mar 2026</span>
+                        <span class="about-timepoint-label">CYRADAR</span>
+                    </button>
+                    <button class="about-timepoint" type="button" role="tab" id="exp-tab-vinsoc" aria-selected="false" aria-controls="exp-panel-vinsoc" tabindex="-1">
+                        <span class="about-timepoint-date">Apr 2026 - Present</span>
+                        <span class="about-timepoint-label">VinSOC</span>
+                    </button>
+                </div>
+
+                <div class="about-detail-panels">
+                    <article class="about-detail-panel is-active" role="tabpanel" id="exp-panel-weamis" aria-labelledby="exp-tab-weamis">
+                        <div class="about-timeline-time">Dec 2024 - Jun 2025</div>
+                        <div class="name">
+                            <div class="company"><span>Weamis Technology Solutions</span></div>
+                            <div class="job">Backend Engineering Intern</div>
+                        </div>
+                        <div class="project-experience">
+                            <div class="item">
+                                <div class="title">Responsibilities</div>
+                                <div class="desc">
+                                    <ul>
+                                        <li>Designed and developed backend RESTful APIs with Java Spring Boot for product and order management workflows.</li>
+                                        <li>Implemented automated JPY-VND currency conversion APIs for international order operations.</li>
+                                        <li>Supported feature-level UI implementation with HTML/CSS for improved workflow usability.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="about-detail-panel" role="tabpanel" id="exp-panel-cyradar" aria-labelledby="exp-tab-cyradar" hidden>
+                        <div class="about-timeline-time">Jul 2025 - Mar 2026</div>
+                        <div class="name">
+                            <div class="company"><a href="https://cyradar.com" target="_blank" rel="noopener noreferrer">CYRADAR Information Security ↗</a></div>
+                            <div class="job">Security Assessment Intern</div>
+                        </div>
+                        <div class="project-experience">
+                            <div class="item">
+                                <div class="title">Responsibilities</div>
+                                <div class="desc">
+                                    <ul>
+                                        <li>Executed web security assessments and penetration testing on real-world systems across multiple business domains.</li>
+                                        <li>Analyzed and validated vulnerabilities aligned with OWASP methodology, including access control and business logic issues.</li>
+                                        <li>Prepared CVSS-based reports, recommended remediation plans, and coordinated fix validation with engineering teams.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="about-detail-panel" role="tabpanel" id="exp-panel-vinsoc" aria-labelledby="exp-tab-vinsoc" hidden>
+                        <div class="about-timeline-time">Apr 2026 - Present</div>
+                        <div class="name">
+                            <div class="company"><span>VinSOC</span></div>
+                            <div class="job">Application Security Engineer</div>
+                        </div>
+                        <div class="project-experience">
+                            <div class="item">
+                                <div class="title">Responsibilities</div>
+                                <div class="desc">
+                                    <ul>
+                                        <li>Performed secure design and application security reviews for web and API systems.</li>
+                                        <li>Assessed vulnerability severity, tracked remediation, and supported verification after fixes.</li>
+                                        <li>Contributed to internal AppSec workflow improvements, security standards, and testing guidance.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
         </section>
@@ -134,7 +205,7 @@
 
     <footer class="footer">
         <div class="copyright">
-            <div>© 2026 Portfolio by <a href="./about.html">Phan Toan</a></div>
+            <div>© 2026 Portfolio by <a href="./index.html">Phan Toan</a></div>
             <span>|</span>
             <div class="fillings">
                 <a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a>
@@ -146,6 +217,189 @@
         </div>
     </footer>
 
+    <script>
+        (function () {
+            const timelineRoot = document.getElementById("aboutExperienceTimeline");
+            if (!timelineRoot) return;
+
+            const track = timelineRoot.querySelector(".about-timepoint-track");
+            const tabs = Array.from(timelineRoot.querySelectorAll('[role="tab"]'));
+            const panels = Array.from(timelineRoot.querySelectorAll('[role="tabpanel"]'));
+            if (!track || !tabs.length || !panels.length) return;
+
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            const defaultBehavior = reduceMotion ? "auto" : "smooth";
+            let scrollDebounce = null;
+            let suppressClickUntil = 0;
+
+            const dragState = {
+                active: false,
+                pointerId: null,
+                startX: 0,
+                startLeft: 0,
+                moved: false
+            };
+
+            const getNearestTab = () => {
+                const trackRect = track.getBoundingClientRect();
+                const trackCenter = trackRect.left + trackRect.width / 2;
+                let nearest = tabs[0];
+                let minDistance = Number.POSITIVE_INFINITY;
+
+                tabs.forEach((tab) => {
+                    const rect = tab.getBoundingClientRect();
+                    const center = rect.left + rect.width / 2;
+                    const distance = Math.abs(center - trackCenter);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearest = tab;
+                    }
+                });
+
+                return nearest;
+            };
+
+            const updateTrackProgress = (activeTab) => {
+                const index = tabs.indexOf(activeTab);
+                const ratio = tabs.length > 1 ? index / (tabs.length - 1) : 1;
+                track.style.setProperty("--about-progress-ratio", String(ratio));
+            };
+
+            const getCurrentTab = () => tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || null;
+
+            const activateTab = (nextTab, options = {}) => {
+                const {
+                    shouldFocus = false,
+                    shouldScroll = true,
+                    behavior = defaultBehavior
+                } = options;
+
+                const targetPanelId = nextTab.getAttribute("aria-controls");
+                if (!targetPanelId) return;
+                const currentTab = getCurrentTab();
+                const changed = currentTab !== nextTab;
+
+                tabs.forEach((tab) => {
+                    const active = tab === nextTab;
+                    tab.classList.toggle("is-active", active);
+                    tab.setAttribute("aria-selected", String(active));
+                    tab.setAttribute("tabindex", active ? "0" : "-1");
+                });
+
+                panels.forEach((panel) => {
+                    const active = panel.id === targetPanelId;
+                    panel.classList.toggle("is-active", active);
+                    panel.hidden = !active;
+                });
+
+                updateTrackProgress(nextTab);
+
+                if (shouldScroll && changed) {
+                    nextTab.scrollIntoView({
+                        block: "nearest",
+                        inline: "center",
+                        behavior
+                    });
+                }
+
+                if (shouldFocus) {
+                    nextTab.focus();
+                }
+            };
+
+            const snapToNearestTab = (behavior = defaultBehavior) => {
+                const nearest = getNearestTab();
+                activateTab(nearest, { shouldScroll: true, behavior });
+            };
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener("click", () => {
+                    if (Date.now() < suppressClickUntil) return;
+                    activateTab(tab, { shouldScroll: true, behavior: defaultBehavior });
+                });
+
+                tab.addEventListener("keydown", (event) => {
+                    let nextIndex = index;
+
+                    if (event.key === "ArrowRight") {
+                        nextIndex = (index + 1) % tabs.length;
+                    } else if (event.key === "ArrowLeft") {
+                        nextIndex = (index - 1 + tabs.length) % tabs.length;
+                    } else if (event.key === "Home") {
+                        nextIndex = 0;
+                    } else if (event.key === "End") {
+                        nextIndex = tabs.length - 1;
+                    } else {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    activateTab(tabs[nextIndex], { shouldFocus: true, shouldScroll: true, behavior: defaultBehavior });
+                });
+            });
+
+            track.addEventListener(
+                "scroll",
+                () => {
+                    if (dragState.active) return;
+                    clearTimeout(scrollDebounce);
+                    scrollDebounce = setTimeout(() => {
+                        snapToNearestTab(defaultBehavior);
+                    }, 130);
+                },
+                { passive: true }
+            );
+
+            const onDragPointerMove = (event) => {
+                if (!dragState.active || dragState.pointerId !== event.pointerId) return;
+
+                const deltaX = event.clientX - dragState.startX;
+                if (Math.abs(deltaX) > 3) {
+                    dragState.moved = true;
+                }
+                track.scrollLeft = dragState.startLeft - deltaX;
+            };
+
+            const onDragPointerEnd = (event) => {
+                if (!dragState.active || dragState.pointerId !== event.pointerId) return;
+
+                dragState.active = false;
+                dragState.pointerId = null;
+                track.classList.remove("is-dragging");
+
+                window.removeEventListener("pointermove", onDragPointerMove);
+                window.removeEventListener("pointerup", onDragPointerEnd);
+                window.removeEventListener("pointercancel", onDragPointerEnd);
+
+                if (dragState.moved) {
+                    suppressClickUntil = Date.now() + 180;
+                    snapToNearestTab(defaultBehavior);
+                }
+            };
+
+            track.addEventListener("pointerdown", (event) => {
+                if (event.pointerType === "touch") return;
+                if (event.pointerType === "mouse" && event.button !== 0) return;
+
+                dragState.active = true;
+                dragState.pointerId = event.pointerId;
+                dragState.startX = event.clientX;
+                dragState.startLeft = track.scrollLeft;
+                dragState.moved = false;
+
+                track.classList.add("is-dragging");
+                window.addEventListener("pointermove", onDragPointerMove, { passive: true });
+                window.addEventListener("pointerup", onDragPointerEnd);
+                window.addEventListener("pointercancel", onDragPointerEnd);
+            });
+
+            const initialTab = tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || tabs[0];
+            activateTab(initialTab, { shouldScroll: false });
+            requestAnimationFrame(() => {
+                snapToNearestTab("auto");
+            });
+        })();
+    </script>
     <script src="./js/main.min.js"></script>
 </body>
 </html>
