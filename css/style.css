@@ -394,6 +394,134 @@ main {
   margin: 24px 0;
 }
 
+.index .hello {
+  width: 100%;
+  max-width: none;
+  height: 400px;
+  margin: 24px 0 0;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(135deg, #0F1320 0%, #1D2740 58%, #2E4F96 100%);
+}
+
+.index .hello::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.2), transparent 44%);
+}
+
+.index .hello::after {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.32) 1px, transparent 1px);
+  background-size: 8px 8px;
+  mask-image: radial-gradient(at center, #fff, transparent 72%);
+  -webkit-mask-image: radial-gradient(at center, #fff, transparent 72%);
+  opacity: 0.6;
+}
+
+.index .hello .title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.index .hello .title .title-hi,
+.index .hello .title .title-name {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.index .hello .title .title-hi {
+  background: linear-gradient(180deg, #E8E8F6 0%, rgba(232, 232, 246, 0.72) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.index .hello .title .title-name {
+  --bg: linear-gradient(90deg, #A29CD3 0%, #E8BFAC 100%);
+  position: relative;
+  background: var(--bg);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.index .hello .title .title-name:hover::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  width: 100%;
+  height: 1px;
+  background: var(--bg);
+}
+
+.index .hello .hello-desc {
+  position: relative;
+  z-index: 1;
+  height: 28px;
+  margin: 24px 0 0;
+  color: #B3B3C1;
+  font-size: 16px;
+  line-height: 28px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  padding: 0 24px;
+}
+
+.index .hello .hello-desc .hello-typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  border-right: 1px solid rgba(179, 179, 193, 0.95);
+  animation: helloTypingLoop 4.2s steps(29, end) infinite, helloCaret 0.78s step-end infinite;
+}
+
+@keyframes helloTypingLoop {
+  0% {
+    width: 0;
+  }
+
+  40% {
+    width: 29ch;
+  }
+
+  64% {
+    width: 29ch;
+  }
+
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes helloCaret {
+  0%,
+  45% {
+    border-right-color: rgba(179, 179, 193, 0.95);
+  }
+
+  46%,
+  100% {
+    border-right-color: transparent;
+  }
+}
+
 .index .quickly-link {
   padding: 88px 24px 64px;
 }
@@ -1540,31 +1668,103 @@ main {
 
 .code-block-wrap {
   position: relative;
-  margin: 14px 0;
+  margin: 16px 0;
 }
 
 .blog-markdown pre {
   margin: 0;
   border: 1px solid var(--color-cloud-gray);
   border-radius: var(--radius-small);
-  background: #f7f8fb;
-  padding: 34px 16px 10px 30px;
+  background: #f8fafc;
+  padding: 44px 16px 12px 30px;
   overflow: auto;
+  line-height: 1.45;
 }
 
 .blog-markdown pre code {
+  display: block;
   padding: 0;
   background: transparent;
   border: none;
-  color: var(--color-carbon);
+  color: #111827;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.45;
+}
+
+.code-lang-badge {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 2;
+  border-radius: 999px;
+  border: 1px solid #d4d8e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.code-lang-commandline .code-lang-badge {
+  background: #1f2937;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+.code-lang-json .code-lang-badge {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.code-lang-python .code-lang-badge {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.code-lang-java .code-lang-badge {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.code-lang-javascript .code-lang-badge {
+  background: #fef9c3;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.code-lang-html .code-lang-badge {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.code-lang-php .code-lang-badge {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+}
+
+.code-lang-commandline .blog-markdown pre {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+.code-lang-commandline .blog-markdown pre code {
+  color: #e5e7eb;
 }
 
 .code-copy-btn {
   position: absolute;
   top: 10px;
   right: 10px;
+  z-index: 2;
   min-height: 28px;
   border-radius: var(--radius-small);
   border: 1px solid var(--color-pale-silver);
@@ -1582,10 +1782,133 @@ main {
   background: var(--color-light-ash);
 }
 
+.code-copy-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.code-lang-commandline .code-copy-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+.code-lang-commandline .code-copy-btn:hover {
+  background: #1e293b;
+}
+
 .code-copy-btn.copied {
   background: var(--color-primary);
   color: var(--color-white);
   border-color: var(--color-primary);
+}
+
+.blog-markdown pre code .tok-comment {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.blog-markdown pre code .tok-keyword {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.blog-markdown pre code .tok-string {
+  color: #047857;
+}
+
+.blog-markdown pre code .tok-number {
+  color: #b45309;
+}
+
+.blog-markdown pre code .tok-boolean,
+.blog-markdown pre code .tok-null {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.blog-markdown pre code .tok-function {
+  color: #2563eb;
+}
+
+.blog-markdown pre code .tok-class {
+  color: #9333ea;
+}
+
+.blog-markdown pre code .tok-variable {
+  color: #be123c;
+}
+
+.blog-markdown pre code .tok-tag {
+  color: #1d4ed8;
+}
+
+.blog-markdown pre code .tok-attr {
+  color: #7c3aed;
+}
+
+.blog-markdown pre code .tok-value {
+  color: #0f766e;
+}
+
+.blog-markdown pre code .tok-annotation {
+  color: #db2777;
+}
+
+.blog-markdown pre code .tok-key {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.blog-markdown pre code .tok-operator,
+.blog-markdown pre code .tok-punctuation {
+  color: #64748b;
+}
+
+.blog-markdown pre code .tok-command {
+  color: #111827;
+  font-weight: 700;
+}
+
+.blog-markdown pre code .tok-prompt {
+  color: #92400e;
+  font-weight: 700;
+}
+
+.blog-markdown pre code .tok-option {
+  color: #2563eb;
+}
+
+.blog-markdown pre code .tok-path {
+  color: #0f766e;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-comment {
+  color: #94a3b8;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-command {
+  color: #f8fafc;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-prompt {
+  color: #f59e0b;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-option {
+  color: #93c5fd;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-path {
+  color: #5eead4;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-string {
+  color: #86efac;
+}
+
+.code-lang-commandline .blog-markdown pre code .tok-key {
+  color: #fbcfe8;
 }
 
 .blog-markdown figure {
@@ -1894,6 +2217,30 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .index .hello {
+    min-height: 300px;
+    width: 100%;
+    margin-top: 16px;
+    border-radius: 0;
+  }
+
+  .index .hello::after {
+    width: 360px;
+    height: 360px;
+  }
+
+  .index .hello .title .title-hi,
+  .index .hello .title .title-name {
+    font-size: 24px;
+  }
+
+  .index .hello .hello-desc {
+    margin-top: 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    letter-spacing: 0.04em;
+  }
+
   .about-horizontal-timeline {
     padding: 16px;
   }
@@ -1973,6 +2320,25 @@ main {
     font-size: 21px;
   }
 
+  .index .hello {
+    min-height: 268px;
+  }
+
+  .index .hello::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  .index .hello .title .title-hi,
+  .index .hello .title .title-name {
+    font-size: 22px;
+  }
+
+  .index .hello .hello-desc {
+    font-size: 13px;
+    line-height: 1.62;
+  }
+
   .about-timepoint {
     flex-basis: 136px;
   }
@@ -2004,6 +2370,11 @@ main {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .index .hello .hello-desc .hello-typed {
+    width: auto;
+    border-right: none;
   }
 
   *,

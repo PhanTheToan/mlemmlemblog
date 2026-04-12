@@ -320,6 +320,12 @@
 
     <script>
         (function () {
+            if (window.location.hash) {
+                const cleanUrl = window.location.pathname + window.location.search;
+                window.history.replaceState(null, "", cleanUrl);
+            }
+            window.scrollTo(0, 0);
+
             const timelineRoot = document.getElementById("aboutExperienceTimeline");
             if (!timelineRoot) return;
 
