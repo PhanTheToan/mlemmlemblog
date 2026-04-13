@@ -110,6 +110,8 @@ main {
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
   color: var(--color-carbon);
   font-size: 17px;
@@ -249,6 +251,10 @@ main {
 }
 
 .hero-guide-lec3 {
+  --hero-gradient: linear-gradient(135deg, rgba(10, 18, 30, 0.76) 0%, rgba(20, 37, 65, 0.66) 56%, rgba(31, 56, 103, 0.68) 100%), url("../assets/public/cover_zero.png") center/cover no-repeat;
+}
+
+.hero-guide-lec4 {
   --hero-gradient: linear-gradient(135deg, rgba(10, 18, 30, 0.76) 0%, rgba(20, 37, 65, 0.66) 56%, rgba(31, 56, 103, 0.68) 100%), url("../assets/public/cover_zero.png") center/cover no-repeat;
 }
 

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture 4: Android Reverse Engineering and Patching</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg">
+</head>
+<body class="blog-post-page">
+    <header class="head">
+        <div class="main">
+            <a href="./index.html" class="logo" aria-label="Phan Toan home">
+                <img src="./assets/public/logo.svg" alt="Phan Toan logo">
+            </a>
+            <ul class="menu">
+                <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+            </ul>
+            <ul class="menu" id="menu-expand">
+                <li class="btn skin" id="menu-expand-child" aria-label="Toggle navigation">
+                    <i class="icon menu-icon" aria-hidden="true"></i>
+                </li>
+            </ul>
+            <div id="menu-panel" hidden>
+                <ul class="menu-panel-content">
+                    <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="blog blog-post-page-content">
+        <section class="hero-section hero-guide hero-guide-lec4">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-kicker">Mobile Pentest</div>
+                <h1 class="hero-title">Lecture 4: Android Reverse Engineering and Patching</h1>
+                <p class="hero-subtitle">
+                    Understand APK internals, analyze Smali execution flow, and patch Android logic with APKTool.
+                </p>
+            </div>
+        </section>
+
+        <div class="blog-list">
+            <div class="item">
+                <div class="blog-post-meta-row">
+                    <div class="blog-tags">
+                        <a class="blog-tag" href="./blog.html?tag=pentest_mobile" data-tag="pentest_mobile">#pentest_mobile</a>
+                        <a class="blog-tag" href="./blog.html?tag=android" data-tag="android">#android</a>
+                        <a class="blog-tag" href="./blog.html?tag=reverse_engineering" data-tag="reverse_engineering">#reverse_engineering</a>
+                        <a class="blog-tag" href="./blog.html?tag=smali" data-tag="smali">#smali</a>
+                        <a class="blog-tag" href="./blog.html?tag=apktool" data-tag="apktool">#apktool</a>
+                        <a class="blog-tag" href="./blog.html?tag=lecture4" data-tag="lecture4">#lecture4</a>
+                    </div>
+
+                    <div class="info blog-meta">
+                        <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="Author avatar"></div>
+                        <div class="info-name">Phan Toan</div>
+                        <div class="info-time">2026-04-13</div>
+                    </div>
+                </div>
+
+                <div class="blog-post-layout">
+                    <article class="blog-markdown" id="articleContent">
+                        <h1 id="overview">Lecture 4: Reverse</h1>
+                        <p><strong>Objective:</strong> Learn several application reverse engineering skills.</p>
+
+                        <h2 id="inside-apk">1. Inside the APK</h2>
+                        <p>APK (Android Application Package) is a file that contains all required components to install an app on Android devices. Similar to Windows <code>.exe</code>, manual installation is called <code>side-loading</code>.</p>
+                        <p>Components inside an APK file:</p>
+                        <ul>
+                            <li><strong>META-INF/:</strong> This directory exists in a signed APK and contains the file list in the APK and signature metadata for file verification.</li>
+                            <li><strong>lib/:</strong> Native library files (<code>*.so</code>) are stored in subfolders of <code>lib/</code> such as <code>x86</code>, <code>x86_64</code>.</li>
+                            <li><strong>res/:</strong> This folder contains all XML resources and drawables in different densities like <code>mdpi</code>, <code>hdpi</code>, etc.</li>
+                            <li><strong>AndroidManifest.xml:</strong> Describes the APK name, version, and core app definitions.</li>
+                            <li><strong>classes.dex:</strong> Contains compiled source code converted into DEX bytecode.</li>
+                            <li><strong>resources.arsc:</strong> Some compiled resources and definitions are stored here and often kept uncompressed for faster runtime access.</li>
+                        </ul>
+
+                        <p>APK is an archive file, specifically in <code>zip format-type</code> based on <code>JAR file format</code>, with <code>.apk</code> as the extension. Run <code>unzip</code>:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img.png" alt="Unzip APK archive">
+                        </figure>
+                        <p>After unzipping, check the extracted files:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_1.png" alt="Extracted APK files">
+                        </figure>
+                        <p>This is the same file list mentioned above. However, the files are still in binary format, so they are not directly readable. Therefore, we need to reverse engineer it with <a href="https://apktool.org/docs/install" target="_blank" rel="noopener noreferrer">APKTool</a>. This tool also helps with patching later.</p>
+                        <pre><code class="language-commandline">apktool d InsecureBankv2.apk</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_2.png" alt="APKTool decompile command output">
+                        </figure>
+                        <p>The decompiled output is saved in the <code>InsecureBankv2</code> folder. APKTool decompiles <code>AndroidManifest</code> back to raw XML and converts <code>resource.arsc</code> and <code>classes.dex</code> into <code>SMALI</code>.</p>
+
+                        <h2 id="smali">2. Smali</h2>
+                        <p>All steps in the <em>Inside the APK</em> section can also be automated with <em>ByteCode Viewer</em>.</p>
+                        <p>We need to understand <strong>smali</strong> to understand how code execution flows and to perform <code>patching</code> that changes runtime behavior. Below is an example of smali execution flow.</p>
+                        <p>In <code>Bytecode Viewer</code>, go to <code>view -&gt; pane 2 -&gt; Smali/DEX</code> to display smali code in the second window.</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_3.png" alt="Open Smali view in Bytecode Viewer">
+                        </figure>
+                        <p>Now let us analyze the admin login bypass code shown earlier. This is the original code before translating to <code>smali</code>.</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_4.png" alt="Original Java login bypass logic">
+                        </figure>
+                        <p>Then search for <code>devadmin</code> in smali code to locate the handling logic.</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_6.png" alt="Search devadmin in smali code">
+                        </figure>
+                        <p>A quick explanation of this smali code:</p>
+                        <ul>
+                            <li>Initialize string <code>devadmin</code> and store it in variable <code>v5</code>.</li>
+                            <li>Line 284 compares input string <code>v4</code> with <code>v5</code>. If true, it returns <code>1</code>; if false, it returns <code>0</code>.</li>
+                            <li>Line 285 stores the comparison result in variable <code>v4</code>.</li>
+                            <li>Line 286, <code>if-eqz</code> means <code>equal zero</code>. If <code>v4 = 0</code>, execution jumps to <code>L2:</code>; otherwise it continues.</li>
+                        </ul>
+                        <p>Now we analyze the two branches of this condition.</p>
+                        <p>Branch when <code>if-eqz</code> is not satisfied:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_7.png" alt="if-eqz false branch in smali">
+                        </figure>
+                        <p>Branch when <code>if-eqz</code> is satisfied:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_9.png" alt="if-eqz true branch in smali">
+                        </figure>
+                        <p>Basically, the two branches are not very different.</p>
+                        <p>However, one question is: <em>Why read smali code when we can read Java source code?</em></p>
+
+                        <h2 id="patching">3. Patching Android App</h2>
+                        <p>Patching an app means modifying program code to make it behave as we want. We use <code>APKTool</code> for patching. First, decompile the APK:</p>
+                        <pre><code class="language-commandline">apktool d InsecureBankv2.apk</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_10.png" alt="Decompile before patching">
+                        </figure>
+                        <p>Open the <code>res</code> folder, which stores resources we can quickly modify. Go to the app string file at <code>InsecureBankv2/res/values</code>.</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_11.png" alt="Resource values before editing">
+                        </figure>
+                        <p>Here we found a strange value; try changing <code>isAdmin: yes</code> and see what happens.</p>
+
+                        <p>Now recompile to APK:</p>
+                        <pre><code class="language-commandline">apktool b InsecureBankv2</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_12.png" alt="Recompile patched APK">
+                        </figure>
+                        <p>After compilation, the file is usually in <code>InsecureBankv2/dist</code>. Before installation, we must re-sign it because <code>META-INF</code> still contains the old signature from the original APK. Use <code>keytool</code> and <code>jarsigner</code>.</p>
+                        <p>Create a key with <code>keytool</code>:</p>
+                        <pre><code class="language-commandline">keytool -genkey -v -keystore my-release-key.keystore -alias alias_name -keyalg RSA -keysize 2048 -validity 10000</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_13.png" alt="Generate keystore with keytool">
+                        </figure>
+                        <p>Then sign with that key using <code>jarsigner</code>:</p>
+                        <pre><code class="language-commandline">jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore my-release-key.keystore InsecureBankv2.apk alias_name</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_14.png" alt="Jarsigner command output">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_15.png" alt="Signed APK verification">
+                        </figure>
+
+                        <p>Before installing the new app, remove the old app first. We also rename it to <code>InsecureBankv2_patch</code> to avoid confusion.</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_16.png" alt="Patched app installed on device" style="width: 320px; max-width: 100%; height: auto;">
+                        </figure>
+                        <p>Now we can see <code>Create User</code>. This section only appears after changing <code>isAdmin: Yes</code>. The result shows that app patching is successful.</p>
+
+                        <h2 id="root-bypass">4. Root Status Bypass Patch</h2>
+                        <p>Currently, the app shows <code>Device not root</code>, even though our system is already rooted. Let us bypass this check to prove the device is rooted.</p>
+                        <p>Open <code>Bytecode Viewer</code>, load the APK, and search for <code>Root</code>:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_18.png" alt="Search Root string in bytecode">
+                        </figure>
+                        <p>The result includes <code>showRootStatus</code>, which is suspicious. Open and inspect it:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_19.png" alt="showRootStatus method location">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_23.png" alt="showRootStatus Java logic">
+                        </figure>
+                        <p>This code checks whether <code>/system/app/Superuser.apk</code> exists. If yes, it reports rooted; otherwise it ignores. Now patch this logic from smali:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_22.png" alt="showRootStatus smali logic">
+                        </figure>
+                        <p>A brief explanation: since current output is <code>Device not root</code>, the condition in <code>if(... &amp;&amp; ...)</code> is likely satisfied, so both parts return <code>false</code>. Trace the current flow:</p>
+                        <ul>
+                            <li>Lines 215 and 216 initialize two variables with corresponding values.</li>
+                            <li>Line 217 checks file existence at <code>/system/app/Superuser.apk</code>. It does not exist, and line 218 stores <code>v0 = 0</code>.</li>
+                            <li>Line 219 <code>if-eqz</code> means <code>equal zero</code>, so flow jumps to <code>L3:</code>, sets <code>v0 = 0</code>, then jumps to <code>L1:</code>.</li>
+                            <li>At <code>L1:</code>, <code>if-ne</code> means <code>not-equal</code>. Result is not equal, so it jumps to <code>L4:</code>, prints <code>Device not Rooted!!</code>, and exits the method.</li>
+                        </ul>
+                        <p>How to patch: edit the logic directly. For example, change line 226 to <code>if-eq</code> or line 233 to <code>const/4 v0, 1</code>. Then sign again with the same tools. Here we patch line 233 and re-sign.</p>
+                        <p><em>Decompile with apktool, then edit in VSCode or Notepad.</em></p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_24.png" alt="Patched smali value for root bypass">
+                        </figure>
+                        <p>Compile again:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_25.png" alt="Recompile patched root-check APK">
+                        </figure>
+                        <p>After signing, reinstall it:</p>
+                        <figure>
+                            <img src="./assets/public/lec4_android/img_26.png" alt="Reinstalled patched APK result">
+                        </figure>
+                    </article>
+
+                    <aside class="blog-toc-wrap" aria-label="Table of contents">
+                        <div class="blog-toc-title">Contents</div>
+                        <nav class="blog-toc" id="blogTocNav">
+                            <a class="toc-link level-1" href="#overview">Overview</a>
+                            <a class="toc-link level-1" href="#inside-apk">1. Inside the APK</a>
+                            <a class="toc-link level-1" href="#smali">2. Smali</a>
+                            <a class="toc-link level-1" href="#patching">3. Patching App</a>
+                            <a class="toc-link level-1" href="#root-bypass">4. Root Bypass</a>
+                        </nav>
+                        <div class="blog-reference">
+                            <div class="blog-toc-title">Reference</div>
+                            <a class="blog-reference-link" href="https://tsug0d.com/" target="_blank" rel="noopener noreferrer">tsug0d.com</a>
+                            <a class="blog-reference-link" href="https://apktool.org/docs/install" target="_blank" rel="noopener noreferrer">APKTool Documentation</a>
+                            <a class="blog-reference-link" href="https://github.com/Konloch/bytecode-viewer/releases" target="_blank" rel="noopener noreferrer">Bytecode Viewer Releases</a>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./index.html">Phan Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">GitHub</a></div>
+        </div>
+    </footer>
+
+    <div class="blog-image-lightbox" id="blogImageLightbox" aria-hidden="true">
+        <button class="lightbox-close" id="blogImageLightboxClose" aria-label="Close image viewer">×</button>
+        <img id="blogImageLightboxImg" src="" alt="">
+        <div class="lightbox-caption" id="blogImageLightboxCaption"></div>
+    </div>
+
+    <script>
+        (function () {
+            const lightbox = document.getElementById("blogImageLightbox");
+            const lightboxImg = document.getElementById("blogImageLightboxImg");
+            const lightboxCaption = document.getElementById("blogImageLightboxCaption");
+            const lightboxClose = document.getElementById("blogImageLightboxClose");
+            const sourceImages = Array.from(document.querySelectorAll(".blog-markdown img"));
+            if (!lightbox || !lightboxImg || !lightboxCaption || !lightboxClose || !sourceImages.length) return;
+
+            const closeLightbox = () => {
+                lightbox.classList.remove("open");
+                lightbox.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("blog-image-no-scroll");
+                lightboxImg.setAttribute("src", "");
+                lightboxImg.setAttribute("alt", "");
+                lightboxCaption.textContent = "";
+            };
+
+            sourceImages.forEach((img) => {
+                img.setAttribute("tabindex", "0");
+                img.setAttribute("role", "button");
+                img.setAttribute("aria-label", (img.getAttribute("alt") || "Image") + " - open full view");
+                img.addEventListener("click", () => {
+                    lightboxImg.setAttribute("src", img.getAttribute("src") || "");
+                    lightboxImg.setAttribute("alt", img.getAttribute("alt") || "Blog image preview");
+                    lightboxCaption.textContent = img.getAttribute("alt") || "";
+                    lightbox.classList.add("open");
+                    lightbox.setAttribute("aria-hidden", "false");
+                    document.body.classList.add("blog-image-no-scroll");
+                });
+                img.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    img.click();
+                });
+            });
+
+            lightboxClose.addEventListener("click", closeLightbox);
+            lightbox.addEventListener("click", (event) => {
+                if (event.target === lightbox) closeLightbox();
+            });
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && lightbox.classList.contains("open")) closeLightbox();
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const links = Array.from(document.querySelectorAll(".blog-toc .toc-link"));
+            const sections = links
+                .map((link) => document.querySelector(link.getAttribute("href")))
+                .filter(Boolean);
+
+            if (!links.length || !sections.length) return;
+
+            const setActive = (id) => {
+                links.forEach((link) => {
+                    const active = link.getAttribute("href") === `#${id}`;
+                    link.classList.toggle("active", active);
+                });
+            };
+
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    const visible = entries
+                        .filter((entry) => entry.isIntersecting)
+                        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+                    if (visible && visible.target.id) setActive(visible.target.id);
+                },
+                { rootMargin: "-22% 0px -60% 0px", threshold: [0.05, 0.3, 0.6] }
+            );
+
+            sections.forEach((section) => observer.observe(section));
+            setActive(sections[0].id);
+        })();
+    </script>
+    <script src="./js/main.min.js"></script>
+</body>
+</html>
