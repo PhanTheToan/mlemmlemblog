@@ -10,9 +10,7 @@
 <body>
     <header class="head">
         <div class="main">
-            <a href="./index.html" class="logo" aria-label="Phan Toan home">
-                <img src="./assets/public/logo.svg" alt="Phan Toan logo">
-            </a>
+            <a href="./index.html" class="logo" aria-label="Phan Toan home">PHAN TOAN</a>
             <ul class="menu">
                 <li class="btn nav" onclick="window.location.href='./index.html'">Home</li>
                 <li class="btn" onclick="window.location.href='./blog.html'">Blog</li>
@@ -269,6 +267,13 @@
 
             const getCurrentTab = () => tabs.find((tab) => tab.getAttribute("aria-selected") === "true") || null;
 
+            const scrollTabIntoTrack = (tab, behavior) => {
+                const maxScroll = Math.max(track.scrollWidth - track.clientWidth, 0);
+                const targetLeft = tab.offsetLeft - (track.clientWidth - tab.offsetWidth) / 2;
+                const clampedLeft = Math.min(Math.max(targetLeft, 0), maxScroll);
+                track.scrollTo({ left: clampedLeft, behavior });
+            };
+
             const activateTab = (nextTab, options = {}) => {
                 const {
                     shouldFocus = false,
@@ -297,11 +302,7 @@
                 updateTrackProgress(nextTab);
 
                 if (shouldScroll && changed) {
-                    nextTab.scrollIntoView({
-                        block: "nearest",
-                        inline: "center",
-                        behavior
-                    });
+                    scrollTabIntoTrack(nextTab, behavior);
                 }
 
                 if (shouldFocus) {
