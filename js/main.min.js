@@ -1,4 +1,6 @@
 let copyTimeout;
+const CODE_COLLAPSE_HEIGHT_THRESHOLD = 800;
+const CODE_COLLAPSE_MAX_HEIGHT = 800;
 
 document.addEventListener("DOMContentLoaded", function () {
   initHeaderState();
@@ -376,6 +378,33 @@ function initCodeCopy() {
     button.title = "Copy code block";
     wrapper.appendChild(button);
 
+    if (shouldEnableCodeCollapse(pre)) {
+      wrapper.classList.add("is-long", "is-collapsed");
+      wrapper.style.setProperty("--code-collapsed-max-height", `${CODE_COLLAPSE_MAX_HEIGHT}px`);
+
+      const viewButton = document.createElement("button");
+      viewButton.type = "button";
+      viewButton.className = "code-view-btn";
+
+      const syncViewButton = () => {
+        const expanded = wrapper.classList.contains("is-expanded");
+        viewButton.textContent = expanded ? "Partial" : "Full";
+        viewButton.setAttribute("aria-pressed", expanded ? "true" : "false");
+        viewButton.setAttribute("aria-label", expanded ? "Show partial code block" : "Show full code block");
+        viewButton.title = expanded ? "Show partial code block" : "Show full code block";
+      };
+
+      viewButton.addEventListener("click", () => {
+        const expanded = wrapper.classList.toggle("is-expanded");
+        wrapper.classList.toggle("is-collapsed", !expanded);
+        if (!expanded) pre.scrollTop = 0;
+        syncViewButton();
+      });
+
+      syncViewButton();
+      wrapper.appendChild(viewButton);
+    }
+
     let buttonTimeout;
 
     const resetButtonState = () => {
@@ -458,6 +487,11 @@ function initCodeCopy() {
 
 function normalizeLineBreaks(text) {
   return (text || "").replace(/\r\n?/g, "\n");
+}
+
+function shouldEnableCodeCollapse(pre) {
+  if (!pre) return false;
+  return pre.scrollHeight > CODE_COLLAPSE_HEIGHT_THRESHOLD;
 }
 
 function detectCodeLanguage(pre, codeElement, sourceCode) {
@@ -647,9 +681,7 @@ function escapeHtml(text) {
   return String(text || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/>/g, "&gt;");
 }
 
 function wrapToken(className, value) {
@@ -737,7 +769,7 @@ function highlightCommandLineLine(line) {
   const rest = commandPart.slice(commandMatch[1].length);
 
   const highlightedRest = applyTokenRules(rest, [
-    { pattern: /(&quot;.*?&quot;|&#39;.*?&#39;)/g, className: "tok-string" },
+    { pattern: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, className: "tok-string" },
     { pattern: /\b([A-Z_][A-Z0-9_]*)(=)/g, render: (match) => `${wrapToken("tok-key", match[1])}${wrapToken("tok-operator", match[2])}` },
     { pattern: /(^|\s)(-{1,2}[a-zA-Z0-9][\w-]*)/g, render: (match) => `${match[1]}${wrapToken("tok-option", match[2])}` },
     { pattern: /(^|\s)(~?\/[^\s]+|\.[/][^\s]+)/g, render: (match) => `${match[1]}${wrapToken("tok-path", match[2])}` },
@@ -748,8 +780,8 @@ function highlightCommandLineLine(line) {
 
 function highlightJson(code) {
   return applyTokenRules(code, [
-    { pattern: /(&quot;(?:\\.|[^"\\])*&quot;)(?=\s*:)/g, className: "tok-key" },
-    { pattern: /(:\s*)(&quot;(?:\\.|[^"\\])*&quot;)/g, render: (match) => `${match[1]}${wrapToken("tok-string", match[2])}` },
+    { pattern: /("(?:\\.|[^"\\])*")(?=\s*:)/g, className: "tok-key" },
+    { pattern: /(:\s*)("(?:\\.|[^"\\])*")/g, render: (match) => `${match[1]}${wrapToken("tok-string", match[2])}` },
     { pattern: /\b-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g, className: "tok-number" },
     { pattern: /\b(?:true|false)\b/g, className: "tok-boolean" },
     { pattern: /\bnull\b/g, className: "tok-null" },
@@ -759,8 +791,8 @@ function highlightJson(code) {
 
 function highlightPython(code) {
   return applyTokenRules(code, [
+    { pattern: /("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, className: "tok-string" },
     { pattern: /#.*/g, className: "tok-comment" },
-    { pattern: /(&quot;&quot;&quot;[\s\S]*?&quot;&quot;&quot;|&#39;&#39;&#39;[\s\S]*?&#39;&#39;&#39;|&quot;(?:\\.|[^"\\])*&quot;|&#39;(?:\\.|[^'\\])*&#39;)/g, className: "tok-string" },
     {
       pattern: /\b(?:def|class|return|if|elif|else|for|while|try|except|finally|with|as|import|from|lambda|yield|pass|break|continue|in|is|and|or|not|None|True|False)\b/g,
       className: "tok-keyword",
@@ -773,8 +805,8 @@ function highlightPython(code) {
 
 function highlightJava(code) {
   return applyTokenRules(code, [
+    { pattern: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, className: "tok-string" },
     { pattern: /(?:\/\/.*$|\/\*[\s\S]*?\*\/)/gm, className: "tok-comment" },
-    { pattern: /(&quot;(?:\\.|[^"\\])*&quot;|&#39;(?:\\.|[^'\\])*&#39;)/g, className: "tok-string" },
     {
       pattern: /\b(?:public|private|protected|class|interface|extends|implements|static|final|void|new|return|if|else|for|while|switch|case|break|continue|try|catch|finally|throw|throws|package|import|this|super)\b/g,
       className: "tok-keyword",
@@ -787,8 +819,8 @@ function highlightJava(code) {
 
 function highlightJavascript(code) {
   return applyTokenRules(code, [
+    { pattern: /(`[\s\S]*?`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, className: "tok-string" },
     { pattern: /(?:\/\/.*$|\/\*[\s\S]*?\*\/)/gm, className: "tok-comment" },
-    { pattern: /(`(?:\\.|[^`])*`|&quot;(?:\\.|[^"\\])*&quot;|&#39;(?:\\.|[^'\\])*&#39;)/g, className: "tok-string" },
     {
       pattern: /\b(?:const|let|var|function|return|if|else|for|while|switch|case|break|continue|try|catch|finally|class|new|this|async|await|import|from|export|default|throw)\b/g,
       className: "tok-keyword",
@@ -805,7 +837,7 @@ function highlightHtml(code) {
     { pattern: /&lt;!DOCTYPE[\s\S]*?&gt;/gi, className: "tok-keyword" },
     { pattern: /(&lt;\/?)([a-zA-Z][\w:-]*)/g, render: (match) => `${wrapToken("tok-punctuation", match[1])}${wrapToken("tok-tag", match[2])}` },
     {
-      pattern: /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(=)(&quot;[^"]*&quot;|&#39;[^']*&#39;)/g,
+      pattern: /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(=)("[^"]*"|'[^']*')/g,
       render: (match) => `${wrapToken("tok-attr", match[1])}${wrapToken("tok-operator", match[2])}${wrapToken("tok-value", match[3])}`,
     },
     { pattern: /\/?&gt;/g, className: "tok-punctuation" },
@@ -815,8 +847,8 @@ function highlightHtml(code) {
 function highlightPhp(code) {
   return applyTokenRules(code, [
     { pattern: /&lt;\?php|\?&gt;/g, className: "tok-keyword" },
+    { pattern: /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, className: "tok-string" },
     { pattern: /(?:\/\/.*$|#.*$|\/\*[\s\S]*?\*\/)/gm, className: "tok-comment" },
-    { pattern: /(&quot;(?:\\.|[^"\\])*&quot;|&#39;(?:\\.|[^'\\])*&#39;)/g, className: "tok-string" },
     {
       pattern: /\b(?:function|class|public|private|protected|static|new|return|if|else|elseif|foreach|while|for|try|catch|throw|namespace|use|require|include|echo)\b/g,
       className: "tok-keyword",

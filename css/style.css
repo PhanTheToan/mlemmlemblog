@@ -1835,6 +1835,7 @@ main {
   background: #f8fafc;
   padding: 44px 16px 12px 30px;
   overflow: auto;
+  max-height: none;
   line-height: 1.45;
 }
 
@@ -1980,6 +1981,54 @@ main {
 .code-copy-btn.failed {
   border-color: #dc2626;
   color: #dc2626;
+}
+
+.code-block-wrap.is-long.is-collapsed > pre {
+  max-height: var(--code-collapsed-max-height, 800px);
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.code-block-wrap.is-long.is-expanded > pre {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.code-view-btn {
+  position: absolute;
+  top: 10px;
+  right: 46px;
+  z-index: 2;
+  min-width: 62px;
+  min-height: 28px;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--color-pale-silver);
+  background: #eef2ff;
+  color: #312e81;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0 10px;
+  cursor: pointer;
+  transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.code-view-btn:hover {
+  background: #e0e7ff;
+}
+
+.code-view-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.code-block-wrap.is-expanded .code-view-btn {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
 }
 
 .blog-markdown pre code .tok-comment {
@@ -2457,6 +2506,12 @@ main {
 }
 
 @media screen and (max-width: 768px) {
+  .code-view-btn {
+    right: 44px;
+    min-width: 56px;
+    padding: 0 8px;
+  }
+
   .blog-post-layout {
     grid-template-columns: 1fr;
     gap: 0;
@@ -2654,6 +2709,12 @@ main {
 }
 
 @media screen and (max-width: 480px) {
+  .code-view-btn {
+    min-width: 54px;
+    font-size: 10px;
+    letter-spacing: 0.01em;
+  }
+
   .logo {
     font-size: 14px;
     letter-spacing: 0.22em;
