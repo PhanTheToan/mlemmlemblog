@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture 7.5: Frida Challenge 2 Walkthrough</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg">
+</head>
+<body class="blog-post-page">
+    <header class="head">
+        <div class="main">
+            <a href="./index.html" class="logo" aria-label="Phan Toan home">PHAN TOAN</a>
+            <ul class="menu">
+                <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+            </ul>
+            <ul class="menu" id="menu-expand">
+                <li class="btn skin" id="menu-expand-child" aria-label="Toggle navigation">
+                    <i class="icon menu-icon" aria-hidden="true"></i>
+                </li>
+            </ul>
+            <div id="menu-panel" hidden>
+                <ul class="menu-panel-content">
+                    <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="blog blog-post-page-content">
+        <section class="hero-section hero-guide hero-guide-lec7">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-kicker">Mobile Pentest</div>
+                <h1 class="hero-title">Lecture 7.5: Frida Challenge 2</h1>
+                <p class="hero-subtitle">
+                    Bài walkthrough song ngữ về logcat, native anti brute-force, và brute-force PIN bằng Frida.
+                </p>
+            </div>
+        </section>
+
+        <div class="blog-list">
+            <div class="item">
+                <div class="blog-post-meta-row">
+                    <div class="blog-tags">
+                        <a class="blog-tag" href="./blog.html?tag=pentest_mobile" data-tag="pentest_mobile">#pentest_mobile</a>
+                        <a class="blog-tag" href="./blog.html?tag=android" data-tag="android">#android</a>
+                        <a class="blog-tag" href="./blog.html?tag=frida" data-tag="frida">#frida</a>
+                        <a class="blog-tag" href="./blog.html?tag=reverse_engineering" data-tag="reverse_engineering">#reverse_engineering</a>
+                        <a class="blog-tag" href="./blog.html?tag=lecture7" data-tag="lecture7">#lecture7</a>
+                    </div>
+
+                    <div class="info blog-meta">
+                        <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="Author avatar"></div>
+                        <div class="info-name">Phan Toan</div>
+                        <div class="info-time">2026-04-15</div>
+                    </div>
+                </div>
+
+                <div class="blog-post-layout">
+                    <article class="blog-markdown" id="articleContentVi" data-locale-panel="vi">
+                        <div class="article-locale-top">
+                            <div>
+                                <div class="article-locale-label">Ngôn ngữ bài viết</div>
+                                <p class="article-locale-note">Bài này có sẵn cả bản tiếng Việt và bản tiếng Anh.</p>
+                            </div>
+                            <div class="article-locale-switch" role="group" aria-label="Article language switcher">
+                                <button class="article-locale-btn active" type="button" data-locale="vi" aria-pressed="true">VI</button>
+                                <button class="article-locale-btn" type="button" data-locale="en" aria-pressed="false">EN</button>
+                            </div>
+                        </div>
+
+                        <h1 id="vi-overview">Lecture 7.5: Challenge 2</h1>
+                        <p><strong>Mục tiêu:</strong> Theo dấu logcat, phân tích thư viện native, rồi dùng Frida để tìm đúng PIN và lấy flag.</p>
+                        <p>Case này đi qua đủ những lớp rất đáng học trong mobile pentest: log leakage, Java review, native reverse bằng Ghidra, và dynamic instrumentation để bypass anti brute-force.</p>
+
+                        <h2 id="vi-logcat">1. Cài app và đọc logcat</h2>
+                        <p>Cài file <code>challenge2_release.apk</code> rồi thao tác trực tiếp trên ứng dụng:</p>
+                        <pre><code class="language-commandline">adb install challenge2_realease.apk</code></pre>
+                        <p>Lab gốc: <a href="https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk" target="_blank" rel="noopener noreferrer">challenge2_release.apk</a></p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-4.png" alt="Challenge 2 running on the Android device">
+                        </figure>
+                        <p>Sau khi nhập thử một PIN bất kỳ, mở <code>adb logcat</code> và nhìn vào các dòng debug quan trọng:</p>
+                        <pre><code class="language-commandline">04-14 22:01:46.012   196   196 I logd    : logdr: UID=0 GID=0 PID=8155 b tail=0 logMask=99 pid=0 start=0ns deadline=0ns
+04-14 22:01:48.168   691   691 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+04-14 22:01:53.384  7986  7986 D PinLock : Pin changed, new length 1 with intermediate pin 9
+04-14 22:01:53.395   363   498 D AudioFlinger: mixer(0xb400007ba30f8a70) throttle end: throttle time(33)
+04-14 22:01:53.438  7986  8006 D EGL_emulation: app_time_stats: avg=35737.02ms min=11.04ms max=357234.59ms count=10
+04-14 22:01:53.468  7986  7986 D PinLock : Pin changed, new length 2 with intermediate pin 99
+04-14 22:01:53.493   363   498 D AudioFlinger: mixer(0xb400007ba30f8a70) throttle end: throttle time(35)
+04-14 22:01:54.067  7986  7986 D PinLock : Pin changed, new length 3 with intermediate pin 999
+04-14 22:01:54.454  7986  8006 D EGL_emulation: app_time_stats: avg=11.38ms min=1.72ms max=30.80ms count=60
+04-14 22:01:54.534  7986  7986 D PinLock : Pin changed, new length 4 with intermediate pin 9999
+04-14 22:01:54.933  7986  7986 D PinLock : Pin changed, new length 5 with intermediate pin 99999
+04-14 22:01:55.402  7986  7986 D PinLock : Pin complete: 999999
+04-14 22:01:55.402  7986  7986 D TEST    : 00000000000000000000000000000000AC175D27AC175D27AC175D27AC175D27
+04-14 22:01:55.402  7986  7986 I org.libsodium.jni.NaCl: librarypath=/system/lib64:/system_ext/lib64
+04-14 22:01:55.404  7986  7986 D PROBLEM : Unable to decrypt text
+04-14 22:01:55.404  7986  7986 W System.err: java.lang.RuntimeException: Decryption failed. Ciphertext failed verification
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.Util.isValid(Util.java:47)
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.SecretBox.decrypt(SecretBox.java:56)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.hackerone.mobile.challenge2.MainActivity$1.onComplete(MainActivity.java:42)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.andrognito.pinlockview.PinLockView$1.onNumberClicked(PinLockView.java:56)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.andrognito.pinlockview.PinLockAdapter$NumberViewHolder$1.onClick(PinLockAdapter.java:191)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View.performClick(View.java:7441)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View.performClickInternal(View.java:7418)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View.access$3700(View.java:835)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View$PerformClick.run(View.java:28676)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Handler.handleCallback(Handler.java:938)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Looper.loopOnce(Looper.java:201)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Looper.loop(Looper.java:288)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.app.ActivityThread.main(ActivityThread.java:7839)
+04-14 22:01:55.405  7986  7986 W System.err: 	at java.lang.reflect.Method.invoke(Native Method)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1003)
+04-14 22:01:55.468  7986  8006 D EGL_emulation: app_time_stats: avg=16.59ms min=13.60ms max=19.65ms count=61
+04-14 22:01:56.100   691   691 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS</code></pre>
+                        <p>Chỉ cần bám vào các từ khóa <code>PinLock</code>, <code>TEST</code>, và <code>PROBLEM</code> là đã đủ để lần tới <code>MainActivity</code>.</p>
+
+                        <h2 id="vi-mainactivity">2. Lần theo MainActivity</h2>
+                        <p>Trong <code>onCreate()</code>, ứng dụng khởi tạo sẵn <code>cipherText</code>:</p>
+                        <pre><code class="language-java">public void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        setContentView(R.layout.activity_main);
+        this.cipherText = new Hex().decode("9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99");
+        this.mPinLockView = (PinLockView) findViewById(R.id.pin_lock_view);
+        this.mPinLockView.setPinLockListener(this.mPinLockListener);
+        this.mIndicatorDots = (IndicatorDots) findViewById(R.id.indicator_dots);
+        this.mPinLockView.attachIndicatorDots(this.mIndicatorDots);
+    }</code></pre>
+                        <p>Phần đáng chú ý nhất nằm trong <code>onComplete()</code>, nơi app lấy key từ PIN người dùng rồi thử giải mã ngay:</p>
+                        <pre><code class="language-java">public void onComplete(String str) {
+            Log.d(MainActivity.this.TAG, "Pin complete: " + str);
+            byte[] key = MainActivity.this.getKey(str);
+            Log.d("TEST", MainActivity.bytesToHex(key));
+            try {
+                Log.d("DECRYPTED", new String(new SecretBox(key).decrypt("aabbccddeeffgghhaabbccdd".getBytes(), MainActivity.this.cipherText), StandardCharsets.UTF_8));
+            } catch (RuntimeException e) {
+                Log.d("PROBLEM", "Unable to decrypt text");
+                e.printStackTrace();
+            }
+        }</code></pre>
+                        <p>Từ đây ta có ngay bộ input cần cho brute-force:</p>
+                        <pre><code class="language-text">cipherText='9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99'
+iv='aabbccddeeffgghhaabbccdd'
+Pin='user fill 6-digits'</code></pre>
+                        <p>Chi tiết quan trọng là app vẫn gọi <code>decrypt()</code> kể cả khi nhập sai PIN. Nghĩa là nếu sinh được key liên tục, brute-force là hoàn toàn thực tế.</p>
+                        <pre><code class="language-commandline">04-14 22:01:55.404  7986  7986 W System.err: java.lang.RuntimeException: Decryption failed. Ciphertext failed verification
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.Util.isValid(Util.java:47)
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.SecretBox.decrypt(SecretBox.java:56)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.hackerone.mobile.challenge2.MainActivity$1.onComplete(MainActivity.java:42)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.andrognito.pinlockview.PinLockView$1.onNumberClicked(PinLockView.java:56)
+...</code></pre>
+
+                        <h2 id="vi-native-lib">3. Phân tích <code>native-lib.so</code></h2>
+                        <p>Source Java còn lộ ra hai hàm native mà challenge dùng trực tiếp:</p>
+                        <pre><code class="language-java">    import org.libsodium.jni.crypto.SecretBox;
+    import org.libsodium.jni.encoders.Hex;
+
+    public native byte[] getKey(String str);
+
+    public native void resetCoolDown();
+
+    static {
+        System.loadLibrary("native-lib");
+        hexArray = "0123456789ABCDEF".toCharArray();
+    }</code></pre>
+                        <p>Đầu tiên xác định ABI của thiết bị để mở đúng thư viện:</p>
+                        <pre><code class="language-commandline">adb shell getprop ro.product.cpu.abi</code></pre>
+                        <p>Nếu ra <code>x86_64</code> thì mở <code>lib/x86_64/libnative-lib.so</code> trong Ghidra.</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image.png" alt="getKey function decompiled in Ghidra">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-1.png" alt="resetCoolDown function in Ghidra">
+                        </figure>
+                        <p>Trong <code>resetCoolDown()</code>, biến <code>DAT_00103008</code> bị set về <code>0</code>. Khi quay lại <code>getKey()</code>, chính biến này được dùng như bộ đếm chống brute-force:</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-2.png" alt="Counter comparison inside getKey">
+                        </figure>
+                        <p>Điều kiện <code>DAT_00103008 &lt; 0x33</code> tương đương nhỏ hơn <code>51</code>. Nếu vượt ngưỡng, app sẽ delay khoảng <code>10s</code> rồi mới reset counter. Và đó là lúc <code>resetCoolDown()</code> trở nên hữu ích:</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-3.png" alt="Manual counter reset in native code">
+                        </figure>
+                        <p>Hướng bypass rất rõ: brute-force PIN, nhưng cứ gần chạm ngưỡng thì gọi <code>resetCoolDown()</code> để xóa counter trước khi delay xảy ra.</p>
+
+                        <h2 id="vi-frida">4. Brute-force bằng Frida</h2>
+                        <p>Sau khi gom đủ <code>cipherText</code>, <code>iv</code>, <code>getKey()</code>, và <code>resetCoolDown()</code>, ta có thể viết script Frida như sau:</p>
+                        <pre><code class="language-javascript">setTimeout(
+    function (){
+        function rpad(width, string, pad){
+            return (width &lt;= string.length) ? string : rpad(width,pad+string,pad);
+        }
+        function getPin(pin){
+            return rpad(6,pin,'0');
+        }
+        Java.perform(
+            function() {
+                const SecretBox = Java.use('org.libsodium.jni.crypto.SecretBox');
+                const Hex = Java.use('org.libsodium.jni.encoders.Hex');
+                const JString = Java.use('java.lang.String');
+                const MainActivity = Java.use('com.hackerone.mobile.challenge2.MainActivity');
+                const cipher = '9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99';
+                const iv = 'aabbccddeeffgghhaabbccdd';
+                const BATCH_SIZE = 200;
+                const PAUSE_MS = 1;
+                const LOG_EVERY = 1000;
+
+                Java.choose('com.hackerone.mobile.challenge2.MainActivity',{
+                    onMatch : function(instance){
+                        console.log("Found Instance");
+
+                        let counter = 0;
+                        let i = 999999;
+                        let found = false;
+                        const cipherText = Hex.$new().decode(cipher);
+                        const nonce = JString.$new(iv).getBytes();
+
+                        function step(){
+                            if(found || i &lt; 0){
+                                return;
+                            }
+
+                            const stop = Math.max(i - BATCH_SIZE, -1);
+                            for(; i &gt; stop; i--){
+                                const pin = getPin(i.toString());
+                                try{
+                                    const key = instance.getKey(pin);
+                                    counter++;
+                                    if(counter &gt;= 51){
+                                        counter = 0;
+                                        instance.resetCoolDown();
+                                    }
+
+                                    let box = null;
+                                    try{
+                                        box = SecretBox.$new(key);
+                                        box.decrypt(nonce,cipherText);
+                                        console.log("Found Pin: " + pin + " Hex: " + MainActivity.bytesToHex(key));
+                                        found = true;
+                                        break;
+                                    }catch(err){
+                                        // wrong pin
+                                    }finally{
+                                        if(box !== null){
+                                            try{
+                                                box.$dispose();
+                                            }catch(err){
+                                                // nothing
+                                            }
+                                        }
+                                    }
+                                }catch(err){
+                                    // nothing
+                                }
+
+                                if(!found && i % LOG_EVERY === 0){
+                                    console.log("Checked down to PIN: " + getPin(i.toString()));
+                                }
+                            }
+
+                            if(!found && i &gt;= 0){
+                                setTimeout(step, PAUSE_MS);
+                            }
+                        }
+
+                        step();
+                    },
+                    onComplete : function(){
+                        console.log('End!');
+                    }
+                })
+
+            }
+        );
+    },0
+);</code></pre>
+                        <p>Output thực tế:</p>
+                        <pre><code class="language-commandline">Checked down to PIN: 923000
+Checked down to PIN: 922000
+Checked down to PIN: 921000
+Checked down to PIN: 920000
+Checked down to PIN: 919000
+Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34</code></pre>
+
+                        <h2 id="vi-flag">5. Xác minh flag</h2>
+                        <p>Nhập lại PIN vừa tìm được rồi kiểm tra <code>logcat</code> một lần nữa:</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img.png" alt="Recovered flag shown after entering the correct PIN">
+                        </figure>
+                        <pre><code class="language-commandline">04-14 22:50:11.268  8359  8359 D PinLock : Pin complete: 918264
+04-14 22:50:11.268  8359  8359 D TEST    : 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34
+04-14 22:50:11.269  8359  8359 D DECRYPTED: flag{wow_yall_called_a_lot_of_func$}</code></pre>
+                        <p>Kết quả cuối cùng: <strong><code>flag{wow_yall_called_a_lot_of_func$}</code></strong>.</p>
+                    </article>
+
+                    <article class="blog-markdown" id="articleContentEn" data-locale-panel="en" hidden>
+                        <div class="article-locale-top">
+                            <div>
+                                <div class="article-locale-label">Article language</div>
+                                <p class="article-locale-note">This writeup is available in both Vietnamese and English.</p>
+                            </div>
+                            <div class="article-locale-switch" role="group" aria-label="Article language switcher">
+                                <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
+                                <button class="article-locale-btn active" type="button" data-locale="en" aria-pressed="true">EN</button>
+                            </div>
+                        </div>
+
+                        <h1 id="en-overview">Lecture 7.5: Challenge 2</h1>
+                        <p><strong>Objective:</strong> Trace logcat, reverse the native anti brute-force logic, then use Frida to recover the right PIN and decrypt the flag.</p>
+                        <p>This challenge is a strong mobile pentest exercise because it moves across several layers at once: log leakage, Java review, native reverse engineering in Ghidra, and dynamic instrumentation for bypassing cooldown logic.</p>
+
+                        <h2 id="en-logcat">1. Install the app and inspect logcat</h2>
+                        <p>Install <code>challenge2_release.apk</code> and interact with the app directly:</p>
+                        <pre><code class="language-commandline">adb install challenge2_realease.apk</code></pre>
+                        <p>Original lab: <a href="https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk" target="_blank" rel="noopener noreferrer">challenge2_release.apk</a></p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-4.png" alt="Challenge 2 running on the Android device">
+                        </figure>
+                        <p>After entering any test PIN, open <code>adb logcat</code> and focus on the useful lines:</p>
+                        <pre><code class="language-commandline">04-14 22:01:46.012   196   196 I logd    : logdr: UID=0 GID=0 PID=8155 b tail=0 logMask=99 pid=0 start=0ns deadline=0ns
+04-14 22:01:48.168   691   691 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
+04-14 22:01:53.384  7986  7986 D PinLock : Pin changed, new length 1 with intermediate pin 9
+04-14 22:01:53.395   363   498 D AudioFlinger: mixer(0xb400007ba30f8a70) throttle end: throttle time(33)
+04-14 22:01:53.438  7986  8006 D EGL_emulation: app_time_stats: avg=35737.02ms min=11.04ms max=357234.59ms count=10
+04-14 22:01:53.468  7986  7986 D PinLock : Pin changed, new length 2 with intermediate pin 99
+04-14 22:01:53.493   363   498 D AudioFlinger: mixer(0xb400007ba30f8a70) throttle end: throttle time(35)
+04-14 22:01:54.067  7986  7986 D PinLock : Pin changed, new length 3 with intermediate pin 999
+04-14 22:01:54.454  7986  8006 D EGL_emulation: app_time_stats: avg=11.38ms min=1.72ms max=30.80ms count=60
+04-14 22:01:54.534  7986  7986 D PinLock : Pin changed, new length 4 with intermediate pin 9999
+04-14 22:01:54.933  7986  7986 D PinLock : Pin changed, new length 5 with intermediate pin 99999
+04-14 22:01:55.402  7986  7986 D PinLock : Pin complete: 999999
+04-14 22:01:55.402  7986  7986 D TEST    : 00000000000000000000000000000000AC175D27AC175D27AC175D27AC175D27
+04-14 22:01:55.402  7986  7986 I org.libsodium.jni.NaCl: librarypath=/system/lib64:/system_ext/lib64
+04-14 22:01:55.404  7986  7986 D PROBLEM : Unable to decrypt text
+04-14 22:01:55.404  7986  7986 W System.err: java.lang.RuntimeException: Decryption failed. Ciphertext failed verification
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.Util.isValid(Util.java:47)
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.SecretBox.decrypt(SecretBox.java:56)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.hackerone.mobile.challenge2.MainActivity$1.onComplete(MainActivity.java:42)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.andrognito.pinlockview.PinLockView$1.onNumberClicked(PinLockView.java:56)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.andrognito.pinlockview.PinLockAdapter$NumberViewHolder$1.onClick(PinLockAdapter.java:191)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View.performClick(View.java:7441)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View.performClickInternal(View.java:7418)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View.access$3700(View.java:835)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.view.View$PerformClick.run(View.java:28676)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Handler.handleCallback(Handler.java:938)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Looper.loopOnce(Looper.java:201)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.os.Looper.loop(Looper.java:288)
+04-14 22:01:55.405  7986  7986 W System.err: 	at android.app.ActivityThread.main(ActivityThread.java:7839)
+04-14 22:01:55.405  7986  7986 W System.err: 	at java.lang.reflect.Method.invoke(Native Method)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1003)
+04-14 22:01:55.468  7986  8006 D EGL_emulation: app_time_stats: avg=16.59ms min=13.60ms max=19.65ms count=61
+04-14 22:01:56.100   691   691 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS</code></pre>
+                        <p>The keywords <code>PinLock</code>, <code>TEST</code>, and <code>PROBLEM</code> are already enough to lead us toward <code>MainActivity</code>.</p>
+
+                        <h2 id="en-mainactivity">2. Trace MainActivity</h2>
+                        <p>Inside <code>onCreate()</code>, the app initializes a hardcoded <code>cipherText</code> value:</p>
+                        <pre><code class="language-java">public void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        setContentView(R.layout.activity_main);
+        this.cipherText = new Hex().decode("9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99");
+        this.mPinLockView = (PinLockView) findViewById(R.id.pin_lock_view);
+        this.mPinLockView.setPinLockListener(this.mPinLockListener);
+        this.mIndicatorDots = (IndicatorDots) findViewById(R.id.indicator_dots);
+        this.mPinLockView.attachIndicatorDots(this.mIndicatorDots);
+    }</code></pre>
+                        <p>The more interesting part is <code>onComplete()</code>, where the app derives a key from the user PIN and immediately attempts decryption:</p>
+                        <pre><code class="language-java">public void onComplete(String str) {
+            Log.d(MainActivity.this.TAG, "Pin complete: " + str);
+            byte[] key = MainActivity.this.getKey(str);
+            Log.d("TEST", MainActivity.bytesToHex(key));
+            try {
+                Log.d("DECRYPTED", new String(new SecretBox(key).decrypt("aabbccddeeffgghhaabbccdd".getBytes(), MainActivity.this.cipherText), StandardCharsets.UTF_8));
+            } catch (RuntimeException e) {
+                Log.d("PROBLEM", "Unable to decrypt text");
+                e.printStackTrace();
+            }
+        }</code></pre>
+                        <p>That gives us the full input set for brute-force:</p>
+                        <pre><code class="language-text">cipherText='9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99'
+iv='aabbccddeeffgghhaabbccdd'
+Pin='user fill 6-digits'</code></pre>
+                        <p>The key detail is that even a wrong PIN still reaches <code>decrypt()</code>. As long as we can keep generating candidate keys, brute-force remains practical.</p>
+                        <pre><code class="language-commandline">04-14 22:01:55.404  7986  7986 W System.err: java.lang.RuntimeException: Decryption failed. Ciphertext failed verification
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.Util.isValid(Util.java:47)
+04-14 22:01:55.405  7986  7986 W System.err: 	at org.libsodium.jni.crypto.SecretBox.decrypt(SecretBox.java:56)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.hackerone.mobile.challenge2.MainActivity$1.onComplete(MainActivity.java:42)
+04-14 22:01:55.405  7986  7986 W System.err: 	at com.andrognito.pinlockview.PinLockView$1.onNumberClicked(PinLockView.java:56)
+...</code></pre>
+
+                        <h2 id="en-native-lib">3. Analyze <code>native-lib.so</code></h2>
+                        <p>The Java layer exposes two native methods that matter here:</p>
+                        <pre><code class="language-java">    import org.libsodium.jni.crypto.SecretBox;
+    import org.libsodium.jni.encoders.Hex;
+
+    public native byte[] getKey(String str);
+
+    public native void resetCoolDown();
+
+    static {
+        System.loadLibrary("native-lib");
+        hexArray = "0123456789ABCDEF".toCharArray();
+    }</code></pre>
+                        <p>First, identify the device ABI so you can open the right library:</p>
+                        <pre><code class="language-commandline">adb shell getprop ro.product.cpu.abi</code></pre>
+                        <p>If the result is <code>x86_64</code>, inspect <code>lib/x86_64/libnative-lib.so</code> in Ghidra.</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image.png" alt="getKey function decompiled in Ghidra">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-1.png" alt="resetCoolDown function in Ghidra">
+                        </figure>
+                        <p>Inside <code>resetCoolDown()</code>, the variable <code>DAT_00103008</code> is reset to <code>0</code>. When we go back to <code>getKey()</code>, that same variable is used as an anti brute-force counter:</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-2.png" alt="Counter comparison inside getKey">
+                        </figure>
+                        <p>The condition <code>DAT_00103008 &lt; 0x33</code> means the counter can grow until it reaches <code>51</code>. Once it crosses that threshold, the app sleeps for roughly <code>10</code> seconds and only then resets the counter. That is exactly why <code>resetCoolDown()</code> matters:</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/image-3.png" alt="Manual counter reset in native code">
+                        </figure>
+                        <p>The bypass path becomes simple: brute-force the PIN, but call <code>resetCoolDown()</code> before the threshold delay can trigger.</p>
+
+                        <h2 id="en-frida">4. Brute-force with Frida</h2>
+                        <p>Once we have <code>cipherText</code>, <code>iv</code>, <code>getKey()</code>, and <code>resetCoolDown()</code>, the Frida side becomes straightforward:</p>
+                        <pre><code class="language-javascript">setTimeout(
+    function (){
+        function rpad(width, string, pad){
+            return (width &lt;= string.length) ? string : rpad(width,pad+string,pad);
+        }
+        function getPin(pin){
+            return rpad(6,pin,'0');
+        }
+        Java.perform(
+            function() {
+                const SecretBox = Java.use('org.libsodium.jni.crypto.SecretBox');
+                const Hex = Java.use('org.libsodium.jni.encoders.Hex');
+                const JString = Java.use('java.lang.String');
+                const MainActivity = Java.use('com.hackerone.mobile.challenge2.MainActivity');
+                const cipher = '9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99';
+                const iv = 'aabbccddeeffgghhaabbccdd';
+                const BATCH_SIZE = 200;
+                const PAUSE_MS = 1;
+                const LOG_EVERY = 1000;
+
+                Java.choose('com.hackerone.mobile.challenge2.MainActivity',{
+                    onMatch : function(instance){
+                        console.log("Found Instance");
+
+                        let counter = 0;
+                        let i = 999999;
+                        let found = false;
+                        const cipherText = Hex.$new().decode(cipher);
+                        const nonce = JString.$new(iv).getBytes();
+
+                        function step(){
+                            if(found || i &lt; 0){
+                                return;
+                            }
+
+                            const stop = Math.max(i - BATCH_SIZE, -1);
+                            for(; i &gt; stop; i--){
+                                const pin = getPin(i.toString());
+                                try{
+                                    const key = instance.getKey(pin);
+                                    counter++;
+                                    if(counter &gt;= 51){
+                                        counter = 0;
+                                        instance.resetCoolDown();
+                                    }
+
+                                    let box = null;
+                                    try{
+                                        box = SecretBox.$new(key);
+                                        box.decrypt(nonce,cipherText);
+                                        console.log("Found Pin: " + pin + " Hex: " + MainActivity.bytesToHex(key));
+                                        found = true;
+                                        break;
+                                    }catch(err){
+                                        // wrong pin
+                                    }finally{
+                                        if(box !== null){
+                                            try{
+                                                box.$dispose();
+                                            }catch(err){
+                                                // nothing
+                                            }
+                                        }
+                                    }
+                                }catch(err){
+                                    // nothing
+                                }
+
+                                if(!found && i % LOG_EVERY === 0){
+                                    console.log("Checked down to PIN: " + getPin(i.toString()));
+                                }
+                            }
+
+                            if(!found && i &gt;= 0){
+                                setTimeout(step, PAUSE_MS);
+                            }
+                        }
+
+                        step();
+                    },
+                    onComplete : function(){
+                        console.log('End!');
+                    }
+                })
+
+            }
+        );
+    },0
+);</code></pre>
+                        <p>Observed output:</p>
+                        <pre><code class="language-commandline">Checked down to PIN: 923000
+Checked down to PIN: 922000
+Checked down to PIN: 921000
+Checked down to PIN: 920000
+Checked down to PIN: 919000
+Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34</code></pre>
+
+                        <h2 id="en-flag">5. Verify the flag</h2>
+                        <p>Enter the recovered PIN, then check <code>logcat</code> again:</p>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img.png" alt="Recovered flag shown after entering the correct PIN">
+                        </figure>
+                        <pre><code class="language-commandline">04-14 22:50:11.268  8359  8359 D PinLock : Pin complete: 918264
+04-14 22:50:11.268  8359  8359 D TEST    : 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34
+04-14 22:50:11.269  8359  8359 D DECRYPTED: flag{wow_yall_called_a_lot_of_func$}</code></pre>
+                        <p>Final result: <strong><code>flag{wow_yall_called_a_lot_of_func$}</code></strong>.</p>
+                    </article>
+
+                    <aside class="blog-toc-wrap" aria-label="Table of contents">
+                        <div data-locale-toc="vi">
+                            <div class="blog-toc-title">Mục lục</div>
+                            <nav class="blog-toc" id="blogTocNavVi">
+                                <a class="toc-link level-1" href="#vi-overview">Tổng quan</a>
+                                <a class="toc-link level-1" href="#vi-logcat">1. Đọc logcat</a>
+                                <a class="toc-link level-1" href="#vi-mainactivity">2. MainActivity</a>
+                                <a class="toc-link level-1" href="#vi-native-lib">3. Native-lib</a>
+                                <a class="toc-link level-1" href="#vi-frida">4. Script Frida</a>
+                                <a class="toc-link level-1" href="#vi-flag">5. Lấy flag</a>
+                            </nav>
+                            <div class="blog-reference">
+                                <div class="blog-toc-title">Tài liệu</div>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/lec7.md" target="_blank" rel="noopener noreferrer">Markdown tiếng Việt</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/lec7.en.md" target="_blank" rel="noopener noreferrer">Markdown English</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/hook.js" target="_blank" rel="noopener noreferrer">Frida hook script</a>
+                                <a class="blog-reference-link" href="https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk" target="_blank" rel="noopener noreferrer">Original lab</a>
+                            </div>
+                        </div>
+
+                        <div data-locale-toc="en" hidden>
+                            <div class="blog-toc-title">Contents</div>
+                            <nav class="blog-toc" id="blogTocNavEn">
+                                <a class="toc-link level-1" href="#en-overview">Overview</a>
+                                <a class="toc-link level-1" href="#en-logcat">1. Logcat</a>
+                                <a class="toc-link level-1" href="#en-mainactivity">2. MainActivity</a>
+                                <a class="toc-link level-1" href="#en-native-lib">3. Native-lib</a>
+                                <a class="toc-link level-1" href="#en-frida">4. Frida Script</a>
+                                <a class="toc-link level-1" href="#en-flag">5. Recover Flag</a>
+                            </nav>
+                            <div class="blog-reference">
+                                <div class="blog-toc-title">References</div>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/lec7.md" target="_blank" rel="noopener noreferrer">Vietnamese markdown</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/lec7.en.md" target="_blank" rel="noopener noreferrer">English markdown</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/hook.js" target="_blank" rel="noopener noreferrer">Frida hook script</a>
+                                <a class="blog-reference-link" href="https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk" target="_blank" rel="noopener noreferrer">Original lab</a>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./index.html">Phan Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">GitHub</a></div>
+        </div>
+    </footer>
+
+    <div class="blog-image-lightbox" id="blogImageLightbox" aria-hidden="true">
+        <button class="lightbox-close" id="blogImageLightboxClose" aria-label="Close image viewer">×</button>
+        <img id="blogImageLightboxImg" src="" alt="">
+        <div class="lightbox-caption" id="blogImageLightboxCaption"></div>
+    </div>
+
+    <script>
+        (function () {
+            const lightbox = document.getElementById("blogImageLightbox");
+            const lightboxImg = document.getElementById("blogImageLightboxImg");
+            const lightboxCaption = document.getElementById("blogImageLightboxCaption");
+            const lightboxClose = document.getElementById("blogImageLightboxClose");
+            const sourceImages = Array.from(document.querySelectorAll(".blog-markdown img"));
+            if (!lightbox || !lightboxImg || !lightboxCaption || !lightboxClose || !sourceImages.length) return;
+
+            const closeLightbox = () => {
+                lightbox.classList.remove("open");
+                lightbox.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("blog-image-no-scroll");
+                lightboxImg.setAttribute("src", "");
+                lightboxImg.setAttribute("alt", "");
+                lightboxCaption.textContent = "";
+            };
+
+            sourceImages.forEach((img) => {
+                img.setAttribute("tabindex", "0");
+                img.setAttribute("role", "button");
+                img.setAttribute("aria-label", (img.getAttribute("alt") || "Image") + " - open full view");
+                img.addEventListener("click", () => {
+                    lightboxImg.setAttribute("src", img.getAttribute("src") || "");
+                    lightboxImg.setAttribute("alt", img.getAttribute("alt") || "Blog image preview");
+                    lightboxCaption.textContent = img.getAttribute("alt") || "";
+                    lightbox.classList.add("open");
+                    lightbox.setAttribute("aria-hidden", "false");
+                    document.body.classList.add("blog-image-no-scroll");
+                });
+                img.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    img.click();
+                });
+            });
+
+            lightboxClose.addEventListener("click", closeLightbox);
+            lightbox.addEventListener("click", (event) => {
+                if (event.target === lightbox) closeLightbox();
+            });
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && lightbox.classList.contains("open")) closeLightbox();
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const localeButtons = Array.from(document.querySelectorAll(".article-locale-btn"));
+            const articlePanels = Array.from(document.querySelectorAll("[data-locale-panel]"));
+            const tocPanels = Array.from(document.querySelectorAll("[data-locale-toc]"));
+            if (!localeButtons.length || !articlePanels.length || !tocPanels.length) return;
+
+            let observer = null;
+
+            const setupToc = (locale) => {
+                if (observer) observer.disconnect();
+
+                const tocPanel = document.querySelector(`[data-locale-toc="${locale}"]`);
+                if (!tocPanel) return;
+
+                const links = Array.from(tocPanel.querySelectorAll(".toc-link"));
+                const sections = links
+                    .map((link) => document.querySelector(link.getAttribute("href")))
+                    .filter(Boolean);
+
+                if (!links.length || !sections.length) return;
+
+                const setActive = (id) => {
+                    links.forEach((link) => {
+                        const active = link.getAttribute("href") === `#${id}`;
+                        link.classList.toggle("active", active);
+                    });
+                };
+
+                observer = new IntersectionObserver(
+                    (entries) => {
+                        const visible = entries
+                            .filter((entry) => entry.isIntersecting)
+                            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+                        if (visible && visible.target.id) setActive(visible.target.id);
+                    },
+                    { rootMargin: "-22% 0px -60% 0px", threshold: [0.05, 0.3, 0.6] }
+                );
+
+                sections.forEach((section) => observer.observe(section));
+                setActive(sections[0].id);
+            };
+
+            const setLocale = (locale) => {
+                articlePanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute("data-locale-panel") !== locale;
+                });
+
+                tocPanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute("data-locale-toc") !== locale;
+                });
+
+                localeButtons.forEach((button) => {
+                    const active = button.getAttribute("data-locale") === locale;
+                    button.classList.toggle("active", active);
+                    button.setAttribute("aria-pressed", active ? "true" : "false");
+                });
+
+                document.documentElement.lang = locale;
+                setupToc(locale);
+            };
+
+            localeButtons.forEach((button) => {
+                button.addEventListener("click", () => setLocale(button.getAttribute("data-locale")));
+            });
+
+            setLocale("vi");
+        })();
+    </script>
+    <script src="./js/main.min.js"></script>
+</body>
+</html>

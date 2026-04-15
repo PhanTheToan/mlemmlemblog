@@ -1,18 +1,18 @@
 # Lec 7.5: Challenge 2
-> Cài file `challenge2_release.apk` để thực hành challenge này.
-> Lab gốc lấy từ bài `h1-702 2018 CTF`.
+> Install `challenge2_release.apk` to work on this challenge.
+> The original lab comes from `h1-702 2018 CTF`.
 
-[Link lab tại đây](https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk)
+[Lab link](https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk)
 
-Hãy cài ứng dụng và thử thao tác trước để quan sát hành vi của nó.
+Install the app first and interact with it so we can observe its behavior.
 
 ```commandLine
 adb install challenge2_realease.apk
 ```
 
-![Màn hình Challenge 2](image-4.png)
+![Challenge 2 screen](image-4.png)
 
-Hãy nhập thử một mã PIN bất kỳ. Sau đó mở `logcat` để xem ứng dụng đang làm gì phía sau.
+Enter any PIN value you want, then open `logcat` to see what the app is doing behind the scenes.
 
 ```commandline
 04-14 22:01:46.012   196   196 I logd    : logdr: UID=0 GID=0 PID=8155 b tail=0 logMask=99 pid=0 start=0ns deadline=0ns
@@ -52,9 +52,9 @@ Hãy nhập thử một mã PIN bất kỳ. Sau đó mở `logcat` để xem ứ
 04-14 22:01:56.100   691   691 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS
 ```
 
-Từ kết quả `logcat`, chỉ cần lần theo các từ khóa như `PinLock`, `TEST`, `PROBLEM` là ta sẽ tìm được `MainActivity`. Bây giờ cùng kiểm tra các đoạn xử lý chính trong class này.
+From `logcat`, the keywords `PinLock`, `TEST`, and `PROBLEM` are enough to guide us toward `MainActivity`. Let us inspect the key logic there.
 
-- Đoạn mã `onCreate()`:
+- `onCreate()`:
 
 ```java
 public void onCreate(Bundle bundle) {
@@ -68,10 +68,10 @@ public void onCreate(Bundle bundle) {
     }
 ```
 
-Đoạn này dùng để khởi tạo các biến cần thiết. Điểm quan trọng nhất là `cipherText` đã được hardcode sẵn trong ứng dụng.
+This method initializes the required variables. The most important detail is that `cipherText` is hardcoded inside the app.
 
-- Đoạn `onPinChange()` chỉ dùng để hiển thị trạng thái nhập PIN.
-- Đoạn `onComplete()` mới là phần xử lý chính: tạo key từ PIN người dùng nhập vào, sau đó thử giải mã.
+- `onPinChange()` is only used to update the PIN entry state.
+- `onComplete()` contains the core flow: build a key from the user PIN, then try to decrypt the ciphertext.
 
 ```java
 public void onComplete(String str) {
@@ -87,7 +87,7 @@ public void onComplete(String str) {
         }
 ```
 
-Tổng hợp lại, tại thời điểm này ta đã có các thành phần sau:
+At this point, we already know the following inputs:
 
 ```text
 cipherText='9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99'
@@ -95,7 +95,7 @@ iv='aabbccddeeffgghhaabbccdd'
 Pin='user fill 6-digits'
 ```
 
-Dựa vào `logcat`, có thể thấy mỗi lần người dùng nhập sai PIN, ứng dụng vẫn gọi `decrypt()`. Nếu PIN không đúng, nó sẽ ném ngoại lệ và in stack trace ngay lập tức:
+Based on `logcat`, every wrong PIN still reaches `decrypt()`. When the PIN is incorrect, the app immediately throws an exception and prints a stack trace:
 
 ```commandline
 04-14 22:01:55.404  7986  7986 W System.err: java.lang.RuntimeException: Decryption failed. Ciphertext failed verification
@@ -106,9 +106,9 @@ Dựa vào `logcat`, có thể thấy mỗi lần người dùng nhập sai PIN,
 ...
 ```
 
-Ý tưởng đầu tiên xuất hiện gần như ngay lập tức: brute-force mã PIN 6 chữ số. Có thể mang source vào AI để nhờ viết script luôn, nhưng vì đây là hành trình `zero to hero`, ta vẫn nên đào sâu thêm để hiểu chính xác chuyện gì đang xảy ra.
+So the first obvious idea is brute-force against the 6-digit PIN. We could ask AI to write the script right away, but since this is a `zero to hero` exercise, it is more useful to understand the underlying logic first.
 
-Lần theo source code từ trên xuống dưới, ta sẽ thấy hai hàm native sau:
+If we keep reading the source, we find two native methods:
 
 ```java
     import org.libsodium.jni.crypto.SecretBox;
@@ -124,49 +124,49 @@ Lần theo source code từ trên xuống dưới, ta sẽ thấy hai hàm nativ
     }
 ```
 
-Đoạn mã trên cho thấy `getKey()` và `resetCoolDown()` được implement bên trong thư viện `native-lib`. Ở flow hiện tại, `getKey()` được gọi trực tiếp từ `onComplete()`, còn `resetCoolDown()` chưa được ứng dụng sử dụng.
+This shows that `getKey()` and `resetCoolDown()` are implemented inside `native-lib`. In the current flow, `getKey()` is called directly from `onComplete()`, while `resetCoolDown()` is not used by the app itself.
 
-> Cách xác định ABI của thiết bị:
+> To identify the device ABI:
 > `adb shell getprop ro.product.cpu.abi`
 >
-> Ví dụ: `x86_64`
+> Example: `x86_64`
 
-Sau đó mở file tương ứng trong thư mục `lib/x86_64/libnative-lib.so`.
+Then open the matching native library, for example `lib/x86_64/libnative-lib.so`.
 
-Truy cập vào hàm `Java_com_hackerone_mobile_challenge2_MainActivity_getKey` để xem mã trong Ghidra:
+Inspect `Java_com_hackerone_mobile_challenge2_MainActivity_getKey` in Ghidra:
 
-![Hàm getKey trong Ghidra](image.png)
+![getKey in Ghidra](image.png)
 
-Đây là hàm `Java_com_hackerone_mobile_challenge2_MainActivity_resetCoolDown`:
+This is `Java_com_hackerone_mobile_challenge2_MainActivity_resetCoolDown`:
 
-![Hàm resetCoolDown trong Ghidra](image-1.png)
+![resetCoolDown in Ghidra](image-1.png)
 
-Nhìn nhanh phần `resetCoolDown`, ta thấy biến `DAT_00103008 = 0;`, rất có thể đây là biến dùng để reset bộ đếm. Vậy nên ta quay lại `getKey()` và kiểm tra xem biến này có xuất hiện ở đó không.
+In `resetCoolDown`, we can already see `DAT_00103008 = 0;`, which strongly suggests a counter reset. So the next step is to check whether `DAT_00103008` also appears inside `getKey()`.
 
-![Biến đếm trong getKey](image-2.png)
+![Counter usage inside getKey](image-2.png)
 
-Đây chính là đoạn có sử dụng `DAT_00103008`. Có thể thấy một điều kiện `if-else` so sánh `DAT_00103008 < 0x33`, tức là nhỏ hơn `51`. Nếu biến đếm còn nhỏ hơn `51` thì nó tiếp tục tăng. Nếu vượt ngưỡng, chương trình rơi vào nhánh `else`, delay khoảng `10s`, rồi mới reset biến đếm về `0`.
+This is the block where `DAT_00103008` is used. The condition `DAT_00103008 < 0x33` means the counter is allowed to increase until it reaches `51`. Once it crosses that threshold, execution drops into the `else` branch, sleeps for roughly `10` seconds, and only then resets the counter back to `0`.
 
-Phần còn lại của `getKey()` dùng để sinh key từ mã PIN do người dùng nhập vào. Như vậy, có thể kết luận:
+The rest of `getKey()` is used to derive the key from the user-supplied PIN. So the high-level conclusion is:
 
-- `getKey()` vừa sinh key từ PIN, vừa đóng vai trò anti brute-force.
-- `resetCoolDown()` cho phép reset bộ đếm thủ công.
+- `getKey()` derives the key and also enforces anti brute-force.
+- `resetCoolDown()` lets us clear that counter manually.
 
-Tiếp tục nhìn lại `resetCoolDown()`:
+Looking back at `resetCoolDown()`:
 
-![Reset bộ đếm trong native code](image-3.png)
+![Reset counter in native code](image-3.png)
 
-Từ đây, hướng đi khá rõ ràng: brute-force PIN, nhưng cứ mỗi lần chạm ngưỡng thì gọi `resetCoolDown()` để bypass cơ chế chống brute-force.
+The bypass path becomes straightforward: brute-force the PIN, and whenever the counter is close to the limit, call `resetCoolDown()` so the anti brute-force logic never slows us down.
 
-Trước khi viết script, ta đã có đầy đủ nguyên liệu:
+Before writing the script, here is the full list of primitives we already have:
 
-- `SecretBox()` để thử giải mã
-- `getKey()` để sinh key từ PIN người dùng nhập
-- `resetCoolDown()` để reset counter
+- `SecretBox()` for decryption attempts
+- `getKey()` to derive a key from the user PIN
+- `resetCoolDown()` to reset the counter
 - `cipherText`
 - `iv`
 
-Và đây là script Frida hoàn chỉnh:
+And here is the Frida script:
 
 ```javascript
 setTimeout(
@@ -260,7 +260,7 @@ setTimeout(
 );
 ```
 
-Output thu được:
+Observed output:
 
 ```commandLine
 Checked down to PIN: 923000
@@ -271,9 +271,9 @@ Checked down to PIN: 919000
 Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34
 ```
 
-Nhập mã PIN vừa tìm được rồi kiểm tra lại trong `logcat`:
+Enter the recovered PIN and verify the result in `logcat`:
 
-![Kết quả giải mã flag](img.png)
+![Flag decryption result](img.png)
 
 ```commandline
 04-14 22:50:11.268  8359  8359 D PinLock : Pin complete: 918264
@@ -281,4 +281,4 @@ Nhập mã PIN vừa tìm được rồi kiểm tra lại trong `logcat`:
 04-14 22:50:11.269  8359  8359 D DECRYPTED: flag{wow_yall_called_a_lot_of_func$}
 ```
 
-*Kết quả flag: `flag{wow_yall_called_a_lot_of_func$}`*
+*Recovered flag: `flag{wow_yall_called_a_lot_of_func$}`*
