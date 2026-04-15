@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lecture 7.5: Frida Challenge 2 Walkthrough</title>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="shortcut icon" href="./assets/public/favicon.svg">
+    <style>
+        #articleContentVi pre,
+        #articleContentEn pre {
+            max-height: 600px;
+        }
+    </style>
 </head>
 <body class="blog-post-page">
     <header class="head">
@@ -36,7 +42,7 @@
                 <div class="hero-kicker">Mobile Pentest</div>
                 <h1 class="hero-title">Lecture 7.5: Frida Challenge 2</h1>
                 <p class="hero-subtitle">
-                    Bài walkthrough về logcat, native anti brute-force, và brute-force PIN bằng Frida.
+                    Walkthrough of logcat tracing, native anti brute-force analysis, and Frida-based PIN brute-force.
                 </p>
             </div>
         </section>
@@ -60,12 +66,12 @@
                 </div>
 
                 <div class="blog-post-layout">
-                    <article class="blog-markdown" id="articleContentVi" data-locale-panel="vi">
+                    <article class="blog-markdown" id="articleContentVi" data-locale-panel="vi" hidden>
                         <div class="article-locale-top">
 
                             <div class="article-locale-switch" role="group" aria-label="Article language switcher">
-                                <button class="article-locale-btn active" type="button" data-locale="vi" aria-pressed="true">VI</button>
-                                <button class="article-locale-btn" type="button" data-locale="en" aria-pressed="false">EN</button>
+                                <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
+                                <button class="article-locale-btn active" type="button" data-locale="en" aria-pressed="true">EN</button>
                             </div>
                         </div>
 
@@ -293,9 +299,262 @@ Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271
 04-14 22:50:11.268  8359  8359 D TEST    : 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34
 04-14 22:50:11.269  8359  8359 D DECRYPTED: flag{wow_yall_called_a_lot_of_func$}</code></pre>
                         <p>Kết quả cuối cùng: <strong><code>flag{wow_yall_called_a_lot_of_func$}</code></strong>.</p>
+
+                        <h2 id="vi-advanced">6. Khai thác nâng cao không dùng <code>resetCoolDown()</code></h2>
+                        <p>Ở nhánh này, ta không gọi <code>resetCoolDown()</code>. Thay vào đó, ta hook thẳng vào <code>getKey()</code> và ghi đè biến counter native <code>DAT_00103008</code> về <code>0</code> trước mỗi lần so sánh.</p>
+                        <p>Trong Ghidra, image base là <code>0x00100000</code>, còn counter ở <code>0x00103008</code>, nên offset sẽ là:</p>
+                        <pre><code class="language-text">COUNTER_OFF = 0x00103008 - 0x00100000 = 0x3008</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_1.png" alt="Counter address analysis in Ghidra">
+                        </figure>
+                        <p>Từ offset này, script sẽ tính được địa chỉ runtime của counter:</p>
+                        <pre><code class="language-javascript">const base = Module.findBaseAddress("libnative-lib.so");
+const counterPtr = base.add(0x3008);</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_3.png" alt="Counter write point before comparison">
+                        </figure>
+                        <p>Khi ghi giá trị, cần đúng kích thước <code>qword</code> bằng <code>writeU64(0)</code> và đặt trước bước kiểm tra <code>CMP ... 0x33</code> trong flow <code>getKey()</code>.</p>
+                        <p>Script bypass counter tối giản: <a href="./assets/public/lec7_android/hook_bypass_counter.js" target="_blank" rel="noopener noreferrer">hook_bypass_counter.js</a></p>
+                        <pre><code class="language-javascript">'use strict';
+
+const LIB = 'libnative-lib.so';
+const IMAGE_BASE = 0x00100000;
+const DAT_COUNTER = 0x00103008;
+const COUNTER_OFF = DAT_COUNTER - IMAGE_BASE; // 0x3008
+
+console.log('[*] script loaded');
+
+Java.perform(function () {
+  const MainActivity = Java.use('com.hackerone.mobile.challenge2.MainActivity');
+  const getKeyOv = MainActivity.getKey.overload('java.lang.String');
+
+  let counterPtr = null;
+  let hooked = false;
+
+  const t = setInterval(function () {
+    try {
+      const mod = Process.findModuleByName(LIB);
+      if (!mod) {
+        console.log('[*] waiting for ' + LIB + ' ...');
+        return;
+      }
+
+      counterPtr = mod.base.add(COUNTER_OFF);
+      console.log('[+] base=' + mod.base + ' counter=' + counterPtr);
+
+      if (!hooked) {
+        hooked = true;
+        getKeyOv.implementation = function (pin) {
+          counterPtr.writeU64(0);
+          return getKeyOv.call(this, pin);
+        };
+        console.log('[+] getKey hook installed');
+      }
+
+      clearInterval(t);
+    } catch (e) {
+      console.log('[-] error: ' + e + '\n' + (e.stack || ''));
+    }
+  }, 500);
+});</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_4.png" alt="Bypass counter runtime output">
+                        </figure>
+                        <p>Kết quả cho thấy đã resolve đúng <code>counterPtr</code> và bypass counter thành công.</p>
+                        <p>Script exploit đầy đủ (bypass counter + brute-force + decrypt): <a href="./assets/public/lec7_android/hook_bypass_counter_getPin.js" target="_blank" rel="noopener noreferrer">hook_bypass_counter_getPin.js</a></p>
+                        <pre><code class="language-javascript">'use strict';
+
+const LIB_NAME = 'libnative-lib.so';
+const ACTIVITY = 'com.hackerone.mobile.challenge2.MainActivity';
+
+const CIPHER_HEX = '9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99';
+const NONCE_ASCII = 'aabbccddeeffgghhaabbccdd';
+
+const PIN_START = 999999;
+const PIN_END = 0;
+const BATCH_SIZE = 400;
+const PAUSE_MS = 1;
+const LOG_EVERY = 5000;
+
+function zpad6(n) {
+  return ('000000' + n).slice(-6);
+}
+
+function findExport(moduleName, symbolName) {
+  const mod = Process.findModuleByName(moduleName);
+  if (!mod) return null;
+  const exp = mod.enumerateExports().find(e =&gt; e.name === symbolName);
+  return exp ? exp.address : null;
+}
+
+function getRange(addr) {
+  try {
+    return Process.findRangeByAddress(addr);
+  } catch (_) {
+    try {
+      return Process.getRangeByAddress(addr);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+function resolveCounterPtrFromReset(resetPtr) {
+  const first = Instruction.parse(resetPtr);
+  const second = Instruction.parse(first.next);
+
+  // arm64:
+  // adrp xN, #PAGE
+  // str  xzr, [xN, #disp]   (or wzr)
+  if (first.mnemonic === 'adrp' &amp;&amp; second.mnemonic === 'str') {
+    const o1 = first.operands;
+    const o2 = second.operands;
+    if (
+      o1.length &gt;= 2 &amp;&amp;
+      o2.length &gt;= 2 &amp;&amp;
+      o1[0].type === 'reg' &amp;&amp;
+      o1[1].type === 'imm' &amp;&amp;
+      o2[0].type === 'reg' &amp;&amp;
+      o2[1].type === 'mem' &amp;&amp;
+      (o2[0].value === 'xzr' || o2[0].value === 'wzr') &amp;&amp;
+      o2[1].value.base === o1[0].value
+    ) {
+      return ptr(o1[1].value).add(ptr(o2[1].value.disp));
+    }
+  }
+
+  // x86_64 fallback:
+  // mov qword ptr [rip + disp], 0
+  let p = resetPtr;
+  for (let i = 0; i &lt; 10; i++) {
+    const ins = Instruction.parse(p);
+    if (ins.mnemonic === 'mov' &amp;&amp; ins.operands.length &gt;= 2) {
+      const a = ins.operands[0];
+      const b = ins.operands[1];
+      if (a.type === 'mem' &amp;&amp; b.type === 'imm' &amp;&amp; a.value.base === 'rip' &amp;&amp; b.value === 0) {
+        return ins.next.add(a.value.disp);
+      }
+    }
+    p = ins.next;
+  }
+
+  return null;
+}
+
+console.log('[*] script loaded');
+
+let started = false;
+const boot = setInterval(function () {
+  if (started) return;
+  try {
+    const mod = Process.findModuleByName(LIB_NAME);
+    const resetPtr = mod ? findExport(LIB_NAME, 'Java_com_hackerone_mobile_challenge2_MainActivity_resetCoolDown') : null;
+    if (!mod || !resetPtr) return;
+
+    const counterPtr = resolveCounterPtrFromReset(resetPtr);
+    if (!counterPtr) {
+      console.log('[-] failed to resolve counter pointer from resetCoolDown');
+      clearInterval(boot);
+      return;
+    }
+
+    const range = getRange(counterPtr);
+    console.log('[+] module base=' + mod.base + ' size=0x' + mod.size.toString(16));
+    console.log('[+] resetCoolDown=' + resetPtr);
+    console.log('[+] counterPtr=' + counterPtr + ' range=' + (range ? (range.base + ' ' + range.protection) : 'null'));
+
+    if (!range) {
+      console.log('[-] counter pointer is unmapped');
+      clearInterval(boot);
+      return;
+    }
+    if (range.protection.indexOf('w') === -1) {
+      try {
+        Memory.protect(range.base, range.size, 'rw-');
+      } catch (_) {}
+    }
+
+    started = true;
+    clearInterval(boot);
+
+    Java.perform(function () {
+      const MainActivity = Java.use(ACTIVITY);
+      const SecretBox = Java.use('org.libsodium.jni.crypto.SecretBox');
+      const Hex = Java.use('org.libsodium.jni.encoders.Hex');
+      const JString = Java.use('java.lang.String');
+
+      const getKeyOv = MainActivity.getKey.overload('java.lang.String');
+      getKeyOv.implementation = function (pin) {
+        try {
+          counterPtr.writeU64(0);
+        } catch (e) {
+          console.log('[-] write counter failed: ' + e);
+        }
+        return getKeyOv.call(this, pin);
+      };
+      console.log('[+] getKey hook installed');
+
+      const cipherBytes = Hex.$new().decode(CIPHER_HEX);
+      const nonceBytes = JString.$new(NONCE_ASCII).getBytes();
+
+      Java.choose(ACTIVITY, {
+        onMatch: function (instance) {
+          const act = Java.retain(instance);
+          console.log('[+] MainActivity found; start brute-force');
+
+          let i = PIN_START;
+          let found = false;
+
+          function step() {
+            if (found || i &lt; PIN_END) {
+              if (!found) console.log('[-] not found in range');
+              return;
+            }
+
+            const stop = Math.max(i - BATCH_SIZE, PIN_END - 1);
+            for (; i &gt; stop; i--) {
+              const pin = zpad6(i);
+              try {
+                const key = act.getKey(pin);
+                const plainBytes = SecretBox.$new(key).decrypt(nonceBytes, cipherBytes);
+                const plain = JString.$new(plainBytes).toString();
+
+                console.log('[+] FOUND PIN: ' + pin);
+                console.log('[+] KEY: ' + MainActivity.bytesToHex(key));
+                console.log('[+] PLAINTEXT: ' + plain);
+                found = true;
+                break;
+              } catch (_) {
+                // wrong pin
+              }
+
+              if (!found &amp;&amp; i % LOG_EVERY === 0) {
+                console.log('[*] checked: ' + zpad6(i));
+              }
+            }
+
+            if (!found) setTimeout(step, PAUSE_MS);
+          }
+
+          setTimeout(step, 0);
+        },
+        onComplete: function () {
+          console.log('[*] Java.choose complete');
+        }
+      });
+    });
+  } catch (e) {
+    console.log('[-] fatal: ' + e + '\n' + (e.stack || ''));
+    clearInterval(boot);
+  }
+}, 200);</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_5.png" alt="Final result using no-resetCoolDown exploit path">
+                        </figure>
+                        <p>Nhánh khai thác này vẫn thu được đúng PIN và plaintext flag như phần trên, nhưng không cần gọi <code>resetCoolDown()</code> từ Java instance.</p>
                     </article>
 
-                    <article class="blog-markdown" id="articleContentEn" data-locale-panel="en" hidden>
+                    <article class="blog-markdown" id="articleContentEn" data-locale-panel="en">
                         <div class="article-locale-top">
                             <div class="article-locale-switch" role="group" aria-label="Article language switcher">
                                 <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
@@ -527,10 +786,263 @@ Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271
 04-14 22:50:11.268  8359  8359 D TEST    : 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271CA70C34
 04-14 22:50:11.269  8359  8359 D DECRYPTED: flag{wow_yall_called_a_lot_of_func$}</code></pre>
                         <p>Final result: <strong><code>flag{wow_yall_called_a_lot_of_func$}</code></strong>.</p>
+
+                        <h2 id="en-advanced">6. Advanced Exploit Without Calling <code>resetCoolDown()</code></h2>
+                        <p>In this path, we do not call <code>resetCoolDown()</code>. Instead, we hook <code>getKey()</code> directly and overwrite the native counter variable <code>DAT_00103008</code> to <code>0</code> before each comparison.</p>
+                        <p>In Ghidra, the image base is <code>0x00100000</code>, while the counter sits at <code>0x00103008</code>, so the offset is:</p>
+                        <pre><code class="language-text">COUNTER_OFF = 0x00103008 - 0x00100000 = 0x3008</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_1.png" alt="Counter address analysis in Ghidra">
+                        </figure>
+                        <p>With that offset, the script can resolve the runtime counter address:</p>
+                        <pre><code class="language-javascript">const base = Module.findBaseAddress("libnative-lib.so");
+const counterPtr = base.add(0x3008);</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_3.png" alt="Counter write point before comparison">
+                        </figure>
+                        <p>Use the correct variable size (<code>qword</code>) via <code>writeU64(0)</code>, and place it before the <code>CMP ... 0x33</code> check inside the <code>getKey()</code> flow.</p>
+                        <p>Minimal counter-bypass script: <a href="./assets/public/lec7_android/hook_bypass_counter.js" target="_blank" rel="noopener noreferrer">hook_bypass_counter.js</a></p>
+                        <pre><code class="language-javascript">'use strict';
+
+const LIB = 'libnative-lib.so';
+const IMAGE_BASE = 0x00100000;
+const DAT_COUNTER = 0x00103008;
+const COUNTER_OFF = DAT_COUNTER - IMAGE_BASE; // 0x3008
+
+console.log('[*] script loaded');
+
+Java.perform(function () {
+  const MainActivity = Java.use('com.hackerone.mobile.challenge2.MainActivity');
+  const getKeyOv = MainActivity.getKey.overload('java.lang.String');
+
+  let counterPtr = null;
+  let hooked = false;
+
+  const t = setInterval(function () {
+    try {
+      const mod = Process.findModuleByName(LIB);
+      if (!mod) {
+        console.log('[*] waiting for ' + LIB + ' ...');
+        return;
+      }
+
+      counterPtr = mod.base.add(COUNTER_OFF);
+      console.log('[+] base=' + mod.base + ' counter=' + counterPtr);
+
+      if (!hooked) {
+        hooked = true;
+        getKeyOv.implementation = function (pin) {
+          counterPtr.writeU64(0);
+          return getKeyOv.call(this, pin);
+        };
+        console.log('[+] getKey hook installed');
+      }
+
+      clearInterval(t);
+    } catch (e) {
+      console.log('[-] error: ' + e + '\n' + (e.stack || ''));
+    }
+  }, 500);
+});</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_4.png" alt="Bypass counter runtime output">
+                        </figure>
+                        <p>The runtime output confirms that <code>counterPtr</code> was resolved and the counter bypass works.</p>
+                        <p>Full exploit script (counter bypass + brute-force + decrypt): <a href="./assets/public/lec7_android/hook_bypass_counter_getPin.js" target="_blank" rel="noopener noreferrer">hook_bypass_counter_getPin.js</a></p>
+                        <pre><code class="language-javascript">'use strict';
+
+const LIB_NAME = 'libnative-lib.so';
+const ACTIVITY = 'com.hackerone.mobile.challenge2.MainActivity';
+
+const CIPHER_HEX = '9646D13EC8F8617D1CEA1CF4334940824C700ADF6A7A3236163CA2C9604B9BE4BDE770AD698C02070F571A0B612BBD3572D81F99';
+const NONCE_ASCII = 'aabbccddeeffgghhaabbccdd';
+
+const PIN_START = 999999;
+const PIN_END = 0;
+const BATCH_SIZE = 400;
+const PAUSE_MS = 1;
+const LOG_EVERY = 5000;
+
+function zpad6(n) {
+  return ('000000' + n).slice(-6);
+}
+
+function findExport(moduleName, symbolName) {
+  const mod = Process.findModuleByName(moduleName);
+  if (!mod) return null;
+  const exp = mod.enumerateExports().find(e =&gt; e.name === symbolName);
+  return exp ? exp.address : null;
+}
+
+function getRange(addr) {
+  try {
+    return Process.findRangeByAddress(addr);
+  } catch (_) {
+    try {
+      return Process.getRangeByAddress(addr);
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+function resolveCounterPtrFromReset(resetPtr) {
+  const first = Instruction.parse(resetPtr);
+  const second = Instruction.parse(first.next);
+
+  // arm64:
+  // adrp xN, #PAGE
+  // str  xzr, [xN, #disp]   (or wzr)
+  if (first.mnemonic === 'adrp' &amp;&amp; second.mnemonic === 'str') {
+    const o1 = first.operands;
+    const o2 = second.operands;
+    if (
+      o1.length &gt;= 2 &amp;&amp;
+      o2.length &gt;= 2 &amp;&amp;
+      o1[0].type === 'reg' &amp;&amp;
+      o1[1].type === 'imm' &amp;&amp;
+      o2[0].type === 'reg' &amp;&amp;
+      o2[1].type === 'mem' &amp;&amp;
+      (o2[0].value === 'xzr' || o2[0].value === 'wzr') &amp;&amp;
+      o2[1].value.base === o1[0].value
+    ) {
+      return ptr(o1[1].value).add(ptr(o2[1].value.disp));
+    }
+  }
+
+  // x86_64 fallback:
+  // mov qword ptr [rip + disp], 0
+  let p = resetPtr;
+  for (let i = 0; i &lt; 10; i++) {
+    const ins = Instruction.parse(p);
+    if (ins.mnemonic === 'mov' &amp;&amp; ins.operands.length &gt;= 2) {
+      const a = ins.operands[0];
+      const b = ins.operands[1];
+      if (a.type === 'mem' &amp;&amp; b.type === 'imm' &amp;&amp; a.value.base === 'rip' &amp;&amp; b.value === 0) {
+        return ins.next.add(a.value.disp);
+      }
+    }
+    p = ins.next;
+  }
+
+  return null;
+}
+
+console.log('[*] script loaded');
+
+let started = false;
+const boot = setInterval(function () {
+  if (started) return;
+  try {
+    const mod = Process.findModuleByName(LIB_NAME);
+    const resetPtr = mod ? findExport(LIB_NAME, 'Java_com_hackerone_mobile_challenge2_MainActivity_resetCoolDown') : null;
+    if (!mod || !resetPtr) return;
+
+    const counterPtr = resolveCounterPtrFromReset(resetPtr);
+    if (!counterPtr) {
+      console.log('[-] failed to resolve counter pointer from resetCoolDown');
+      clearInterval(boot);
+      return;
+    }
+
+    const range = getRange(counterPtr);
+    console.log('[+] module base=' + mod.base + ' size=0x' + mod.size.toString(16));
+    console.log('[+] resetCoolDown=' + resetPtr);
+    console.log('[+] counterPtr=' + counterPtr + ' range=' + (range ? (range.base + ' ' + range.protection) : 'null'));
+
+    if (!range) {
+      console.log('[-] counter pointer is unmapped');
+      clearInterval(boot);
+      return;
+    }
+    if (range.protection.indexOf('w') === -1) {
+      try {
+        Memory.protect(range.base, range.size, 'rw-');
+      } catch (_) {}
+    }
+
+    started = true;
+    clearInterval(boot);
+
+    Java.perform(function () {
+      const MainActivity = Java.use(ACTIVITY);
+      const SecretBox = Java.use('org.libsodium.jni.crypto.SecretBox');
+      const Hex = Java.use('org.libsodium.jni.encoders.Hex');
+      const JString = Java.use('java.lang.String');
+
+      const getKeyOv = MainActivity.getKey.overload('java.lang.String');
+      getKeyOv.implementation = function (pin) {
+        try {
+          counterPtr.writeU64(0);
+        } catch (e) {
+          console.log('[-] write counter failed: ' + e);
+        }
+        return getKeyOv.call(this, pin);
+      };
+      console.log('[+] getKey hook installed');
+
+      const cipherBytes = Hex.$new().decode(CIPHER_HEX);
+      const nonceBytes = JString.$new(NONCE_ASCII).getBytes();
+
+      Java.choose(ACTIVITY, {
+        onMatch: function (instance) {
+          const act = Java.retain(instance);
+          console.log('[+] MainActivity found; start brute-force');
+
+          let i = PIN_START;
+          let found = false;
+
+          function step() {
+            if (found || i &lt; PIN_END) {
+              if (!found) console.log('[-] not found in range');
+              return;
+            }
+
+            const stop = Math.max(i - BATCH_SIZE, PIN_END - 1);
+            for (; i &gt; stop; i--) {
+              const pin = zpad6(i);
+              try {
+                const key = act.getKey(pin);
+                const plainBytes = SecretBox.$new(key).decrypt(nonceBytes, cipherBytes);
+                const plain = JString.$new(plainBytes).toString();
+
+                console.log('[+] FOUND PIN: ' + pin);
+                console.log('[+] KEY: ' + MainActivity.bytesToHex(key));
+                console.log('[+] PLAINTEXT: ' + plain);
+                found = true;
+                break;
+              } catch (_) {
+                // wrong pin
+              }
+
+              if (!found &amp;&amp; i % LOG_EVERY === 0) {
+                console.log('[*] checked: ' + zpad6(i));
+              }
+            }
+
+            if (!found) setTimeout(step, PAUSE_MS);
+          }
+
+          setTimeout(step, 0);
+        },
+        onComplete: function () {
+          console.log('[*] Java.choose complete');
+        }
+      });
+    });
+  } catch (e) {
+    console.log('[-] fatal: ' + e + '\n' + (e.stack || ''));
+    clearInterval(boot);
+  }
+}, 200);</code></pre>
+                        <figure>
+                            <img src="./assets/public/lec7_android/img_5.png" alt="Final result using no-resetCoolDown exploit path">
+                        </figure>
+                        <p>This route still recovers the valid PIN and flag plaintext, but without invoking <code>resetCoolDown()</code> on the Java instance.</p>
                     </article>
 
                     <aside class="blog-toc-wrap" aria-label="Table of contents">
-                        <div data-locale-toc="vi">
+                        <div data-locale-toc="vi" hidden>
                             <div class="blog-toc-title">Mục lục</div>
                             <nav class="blog-toc" id="blogTocNavVi">
                                 <a class="toc-link level-1" href="#vi-overview">Tổng quan</a>
@@ -539,16 +1051,22 @@ Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271
                                 <a class="toc-link level-1" href="#vi-native-lib">3. Native-lib</a>
                                 <a class="toc-link level-1" href="#vi-frida">4. Script Frida</a>
                                 <a class="toc-link level-1" href="#vi-flag">5. Lấy flag</a>
+                                <a class="toc-link level-1" href="#vi-advanced">6. Không dùng resetCoolDown</a>
                             </nav>
                             <div class="blog-reference">
                                 <div class="blog-toc-title">Tài liệu</div>
                                 <a class="blog-reference-link" href="./assets/public/lec7_android/hook.js" target="_blank" rel="noopener noreferrer">Frida hook script</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/hook_bypass_counter.js" target="_blank" rel="noopener noreferrer">Bypass counter script</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/hook_bypass_counter_getPin.js" target="_blank" rel="noopener noreferrer">Full exploit script</a>
+                                <a class="blog-reference-link" href="https://frida.re/docs/javascript-api/#java-perform" target="_blank" rel="noopener noreferrer">Frida Java API: Java.perform/use/choose</a>
+                                <a class="blog-reference-link" href="https://frida.re/docs/javascript-api/#process" target="_blank" rel="noopener noreferrer">Frida Process &amp; Memory API</a>
+                                <a class="blog-reference-link" href="https://frida.re/docs/javascript-api/#instruction" target="_blank" rel="noopener noreferrer">Frida Instruction.parse API</a>
                                 <a class="blog-reference-link" href="https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk" target="_blank" rel="noopener noreferrer">Original lab</a>
                                 <a class="blog-reference-link" href="https://tsug0d.com/" target="_blank" rel="noopener noreferrer">tsug0d.com</a>
                             </div>
                         </div>
 
-                        <div data-locale-toc="en" hidden>
+                        <div data-locale-toc="en">
                             <div class="blog-toc-title">Contents</div>
                             <nav class="blog-toc" id="blogTocNavEn">
                                 <a class="toc-link level-1" href="#en-overview">Overview</a>
@@ -557,10 +1075,16 @@ Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271
                                 <a class="toc-link level-1" href="#en-native-lib">3. Native-lib</a>
                                 <a class="toc-link level-1" href="#en-frida">4. Frida Script</a>
                                 <a class="toc-link level-1" href="#en-flag">5. Recover Flag</a>
+                                <a class="toc-link level-1" href="#en-advanced">6. No resetCoolDown</a>
                             </nav>
                             <div class="blog-reference">
                                 <div class="blog-toc-title">References</div>
                                 <a class="blog-reference-link" href="./assets/public/lec7_android/hook.js" target="_blank" rel="noopener noreferrer">Frida hook script</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/hook_bypass_counter.js" target="_blank" rel="noopener noreferrer">Counter bypass script</a>
+                                <a class="blog-reference-link" href="./assets/public/lec7_android/hook_bypass_counter_getPin.js" target="_blank" rel="noopener noreferrer">Full exploit script</a>
+                                <a class="blog-reference-link" href="https://frida.re/docs/javascript-api/#java-perform" target="_blank" rel="noopener noreferrer">Frida Java API: Java.perform/use/choose</a>
+                                <a class="blog-reference-link" href="https://frida.re/docs/javascript-api/#process" target="_blank" rel="noopener noreferrer">Frida Process &amp; Memory API</a>
+                                <a class="blog-reference-link" href="https://frida.re/docs/javascript-api/#instruction" target="_blank" rel="noopener noreferrer">Frida Instruction.parse API</a>
                                 <a class="blog-reference-link" href="https://github.com/tsug0d/AndroidMobilePentest101/blob/master/lab/frida_lab/challenge2_release.apk" target="_blank" rel="noopener noreferrer">Original lab</a>
                                 <a class="blog-reference-link" href="https://tsug0d.com/" target="_blank" rel="noopener noreferrer">tsug0d.com</a>
                             </div>
@@ -699,7 +1223,7 @@ Found Pin: 918264 Hex: 499B77D8B93BFEBB98FCC976003A2DF47D70E389A5A6DF7BAC175D271
                 button.addEventListener("click", () => setLocale(button.getAttribute("data-locale")));
             });
 
-            setLocale("vi");
+            setLocale("en");
         })();
     </script>
     <script src="./js/main.min.js"></script>
