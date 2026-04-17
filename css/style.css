@@ -262,6 +262,10 @@ main {
   --hero-gradient: linear-gradient(135deg, rgba(4, 22, 38, 0.86) 0%, rgba(5, 74, 118, 0.76) 52%, rgba(5, 150, 105, 0.58) 100%), url("../assets/public/cover_zero.png") center/cover no-repeat;
 }
 
+.hero-guide-lab-config {
+  --hero-gradient: linear-gradient(135deg, rgba(4, 20, 38, 0.88) 0%, rgba(3, 105, 161, 0.72) 58%, rgba(14, 165, 233, 0.56) 100%), url("../assets/public/mobile_hacking/cover-mobile-hacking-config.png") center/cover no-repeat;
+}
+
 .hero-overlay {
   display: none;
 }

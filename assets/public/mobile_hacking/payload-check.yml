@@ -1,0 +1,8 @@
+﻿name: test
+value: 123
+items:
+  - one
+  - two
+meta:
+  source: local-host-8686
+  purpose: verify-download-and-parse
