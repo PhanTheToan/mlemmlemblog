@@ -266,6 +266,10 @@ main {
   --hero-gradient: linear-gradient(135deg, rgba(4, 20, 38, 0.88) 0%, rgba(3, 105, 161, 0.72) 58%, rgba(14, 165, 233, 0.56) 100%), url("../assets/public/mobile_hacking/cover-mobile-hacking-config.png") center/cover no-repeat;
 }
 
+.hero-guide-iot-connect {
+  --hero-gradient: linear-gradient(135deg, rgba(5, 22, 40, 0.9) 0%, rgba(7, 78, 122, 0.76) 56%, rgba(15, 125, 96, 0.62) 100%), url("../assets/public/mobile_hacking_lab_IOT_connect/cover_iot_connect.png") center/cover no-repeat;
+}
+
 .hero-overlay {
   display: none;
 }
@@ -1797,12 +1801,43 @@ main {
   margin-bottom: 14px;
 }
 
-.blog-markdown ul {
+.blog-markdown ul,
+.blog-markdown ol {
   margin: 0 0 18px;
   padding-left: 1.2rem;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.blog-markdown ul {
+  list-style: disc;
+}
+
+.blog-markdown ol {
+  list-style: decimal;
+}
+
+.blog-markdown ul ul {
+  list-style-type: circle;
+}
+
+.blog-markdown ul ul ul {
+  list-style-type: square;
+}
+
+.blog-markdown ol ol {
+  list-style-type: lower-alpha;
+}
+
+.blog-markdown li > ul,
+.blog-markdown li > ol {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.blog-markdown li > p {
+  margin-bottom: 0;
 }
 
 .blog-markdown li {
